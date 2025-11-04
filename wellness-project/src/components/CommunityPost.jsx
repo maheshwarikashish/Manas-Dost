@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 
-const CommunityPost = ({ post, onReaction, onSubmitReply, onSuggestReply }) => {
+// MODIFIED: The 'onReaction' and 'currentUser' props are no longer needed.
+const CommunityPost = ({ post, onSubmitReply, onSuggestReply }) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
 
   const handleSubmit = () => {
     if (replyContent.trim()) {
-      onSubmitReply(post.id, replyContent);
+      onSubmitReply(post._id, replyContent);
       setReplyContent('');
       setIsReplying(false);
     }
@@ -15,58 +16,57 @@ const CommunityPost = ({ post, onReaction, onSubmitReply, onSuggestReply }) => {
   const renderReplies = (replies) => {
     if (!replies || replies.length === 0) return null;
     return replies.map((reply, index) => (
-      <div key={index} className="text-sm bg-gray-100 p-2 rounded-lg">
-        <b>{reply.author}:</b> {reply.content}
+      <div key={index} className="text-sm bg-slate-100 p-2 rounded-lg">
+        <b>Anonymous User:</b> {reply.content}
       </div>
     ));
   };
 
   return (
     <div className="bg-white p-5 rounded-xl shadow-md">
-      <p className="text-gray-800">{post.content}</p>
-      <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-        <span>Posted by <b>{post.author}</b></span>
+      <p className="text-slate-800">{post.content}</p>
+      <div className="mt-4 text-xs text-slate-500">
+        <span>Posted by <b>Anonymous User</b></span>
       </div>
 
-      <div className="border-t mt-3 pt-3 flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          {Object.entries(post.reactions).map(([emoji, count]) => (
-            <React.Fragment key={emoji}>
-              <button
-                onClick={() => onReaction(post.id, emoji)}
-                className={`p-1 rounded-full ${post.userReaction === emoji ? 'bg-blue-200' : 'hover:bg-gray-200'} transition`}
-              >
-                {emoji}
-              </button>
-              <span className="text-sm font-semibold">{count}</span>
-            </React.Fragment>
-          ))}
-        </div>
-        <button onClick={() => setIsReplying(!isReplying)} className="text-sm font-semibold text-gray-600 hover:text-black">
+      {/* MODIFIED: All reaction-related JSX has been removed. */}
+      {/* Now, only the "Reply" button is shown. */}
+      <div className="border-t mt-3 pt-3 flex items-center justify-end">
+        <button 
+          onClick={() => setIsReplying(!isReplying)} 
+          className="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition"
+        >
           Reply
         </button>
       </div>
 
       {isReplying && (
-        <div className="mt-3">
+        <div className="mt-3 animate-fade-in">
           <textarea
             value={replyContent}
             onChange={(e) => setReplyContent(e.target.value)}
-            className="w-full text-sm border rounded-lg p-2"
+            className="w-full text-sm border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             placeholder="Write a supportive reply..."
+            rows="2"
           ></textarea>
           <div className="flex justify-end items-center mt-2 space-x-2">
-            <button onClick={() => onSuggestReply(post.id, setReplyContent)} className="text-xs bg-gray-200 px-2 py-1 rounded-full hover:bg-gray-300">
+            <button 
+              onClick={() => onSuggestReply(post._id, setReplyContent)} 
+              className="text-xs bg-slate-200 px-2 py-1 rounded-full hover:bg-slate-300"
+            >
               Suggest Reply ✨
             </button>
-            <button onClick={handleSubmit} className="text-sm bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600">
-              Send
+            <button 
+              onClick={handleSubmit} 
+              className="text-sm bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+            >
+              Post Reply
             </button>
           </div>
         </div>
       )}
 
-      <div className="mt-4 space-y-3 pl-5 border-l-2">
+      <div className="mt-4 space-y-3 pl-5 border-l-2 border-slate-100">
         {renderReplies(post.replies)}
       </div>
     </div>
@@ -74,3 +74,4 @@ const CommunityPost = ({ post, onReaction, onSubmitReply, onSuggestReply }) => {
 };
 
 export default CommunityPost;
+

@@ -1,43 +1,41 @@
 import React from 'react';
 
-// A more versatile icon component
-const Icon = ({ type }) => {
-    if (type === 'Video') {
-        return (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-        );
-    }
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-    );
-};
+const ArrowRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>;
 
-const ResourceCard = ({ resource, borderColorClass }) => {
+const ResourceCard = ({ resource, colors }) => {
     const isVideo = resource.type === 'Video';
-    const linkText = isVideo ? 'Watch Video' : 'Read Article';
-    const linkHref = isVideo ? resource.content : '#'; 
+    
+    // Create a dynamic, themed placeholder URL using the passed-in color
+    const hexColor = colors.bg.replace('bg-[', '').replace(']', '').slice(1);
+    const placeholderText = resource.title.split(' ').slice(0, 2).join('+');
+    const imageUrl = `https://placehold.co/600x400/${hexColor}/white?text=${placeholderText}&font=lato`;
 
     return (
-        <div className={`bg-blue rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 border-t-4 ${borderColorClass} group`}>
-            <div className="p-5 rounded-lg transition-colors duration-300 group-hover:bg-slate-50">
-                <div className="flex items-start space-x-4">
-                    {/* MODIFIED: Icon now changes color on group-hover */}
-                    <div className="flex-shrink-0 text-slate-500 transition-colors duration-300 group-hover:text-indigo-600">
-                        <Icon type={resource.type} />
-                    </div>
-                    <div>
-                        {/* MODIFIED: Title now changes color on group-hover */}
-                        <h5 className="font-bold text-slate-800 transition-colors duration-300 group-hover:text-indigo-600">{resource.title}</h5>
-                        <p className="text-sm text-slate-500 mt-1">{isVideo ? 'A guided video session.' : resource.content}</p>
-                    </div>
-                </div>
+        <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 group overflow-hidden h-full flex flex-col hover:-translate-y-2">
+            <div className="relative">
+                <img src={imageUrl} alt={resource.title} className="w-full h-48 object-cover" />
+                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black/50 to-transparent"></div>
+                <span className={`absolute top-4 left-4 text-xs font-bold text-white px-3 py-1 rounded-full ${colors.bg}`}>
+                    {resource.type}
+                </span>
+            </div>
+
+            <div className="p-6 flex flex-col flex-grow">
+                <h5 className={`text-xl font-bold text-[#2C3E50] group-hover:${colors.text} transition-colors duration-300`}>
+                    {resource.title}
+                </h5>
+                <p className="text-base text-gray-600 mt-2 flex-grow">
+                    {isVideo ? 'Guided video session to help you recenter.' : resource.content}
+                </p>
+
                 <a
-                    href={linkHref}
+                    href={isVideo ? resource.content : '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 inline-block text-sm text-indigo-600 font-semibold hover:underline"
+                    className={`inline-flex items-center font-bold text-sm mt-4 ${colors.text}`}
                 >
-                    {linkText} →
+                    {isVideo ? 'Watch Video' : 'Read Article'}
+                    <ArrowRightIcon />
                 </a>
             </div>
         </div>

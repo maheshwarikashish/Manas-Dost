@@ -1,100 +1,219 @@
-import React, { useState } from 'react';
-import { callGeminiAPI } from '../../services/geminiAPI';
+import React, { useState, useEffect } from 'react';
+import api from '../../services/api';
+import { Bar } from 'react-chartjs-2';
+// It's important to import these for Chart.js v3+ to work correctly
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 
-// A simple component to safely render the AI's markdown checklist as JSX
-const MarkdownChecklist = ({ text }) => {
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+// --- SVG Icons ---
+const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>;
+const SpinnerIcon = ({ color = 'text-white' }) => <svg className={`animate-spin h-5 w-5 ${color}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+
+// --- Sub-component for the Goal Setter checklist ---
+const MarkdownChecklist = ({ text, themeColor }) => {
     const items = text.split('\n').filter(line => line.trim().startsWith('*') || line.trim().startsWith('-'));
+    const [checkedState, setCheckedState] = useState(new Array(items.length).fill(false));
+
+    const handleCheckboxChange = (position) => {
+        const updatedCheckedState = checkedState.map((item, index) => index === position ? !item : item);
+        setCheckedState(updatedCheckedState);
+    };
+
     return (
-        <div className="space-y-2">
+        <div className="space-y-3">
             {items.map((item, index) => (
                 <div key={index} className="flex items-center">
-                    <input type="checkbox" className="h-4 w-4 rounded mr-3" />
-                    <span>{item.replace(/(\* |-)/, '').trim()}</span>
+                    <button onClick={() => handleCheckboxChange(index)} className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${checkedState[index] ? `${themeColor.bg} ${themeColor.border}` : 'border-gray-300'}`}>
+                        {checkedState[index] && <CheckIcon />}
+                    </button>
+                    <span className={`ml-3 ${checkedState[index] ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                        {item.replace(/(\* |-)/, '').trim()}
+                    </span>
                 </div>
             ))}
         </div>
     );
 };
 
-const ToolsTab = () => {
-    // State for AI Goal Setter
-    const [goalInput, setGoalInput] = useState('');
-    const [goalOutput, setGoalOutput] = useState('');
-    const [isGeneratingGoal, setIsGeneratingGoal] = useState(false);
 
-    // State for AI Journal Summary
+// --- Sub-component for the Journal Summary ---
+const JournalSummaryDisplay = ({ data }) => {
+    const chartData = {
+        labels: data.chartData.map(d => d.day),
+        datasets: [{
+            label: 'Mood Trend',
+            data: data.chartData.map(d => d.mood),
+            backgroundColor: data.chartData.map(d => {
+                if (d.mood <= 2) return '#FF6B6B'; // Coral
+                if (d.mood === 3) return '#FF9F43'; // Orange
+                return '#00A896'; // Teal
+            }),
+            borderRadius: 6,
+        }]
+    };
+    const chartOptions = {
+        responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, max: 5, grid: { drawBorder: false }, ticks: { stepSize: 1 } }, x: { grid: { display: false } } }
+    };
+    return (
+        <div className="space-y-6">
+            <div>
+                <h5 className="font-bold text-[#2C3E50]">Your Daily Summary</h5>
+                <p className="text-gray-600 mt-1">{data.summary}</p>
+            </div>
+            <div>
+                <h5 className="font-bold text-[#2C3E50]">Personalized Tips</h5>
+                <ul className="list-disc list-inside text-gray-600 space-y-1 mt-2">
+                    {data.tips.map((tip, index) => <li key={index}>{tip}</li>)}
+                </ul>
+            </div>
+            <div>
+                <h5 className="font-bold text-[#2C3E50]">Your Mood Trend</h5>
+                <div className="h-48 mt-2">
+                    <Bar options={chartOptions} data={chartData} />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Main ToolsTab Component ---
+const ToolsTab = () => {
+    const [savedPlan, setSavedPlan] = useState(null);
+    const [goalInput, setGoalInput] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [journalInput, setJournalInput] = useState('');
-    const [journalOutput, setJournalOutput] = useState('');
+    const [journalSummary, setJournalSummary] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
     const [isSummarizing, setIsSummarizing] = useState(false);
 
+    useEffect(() => {
+        const loadInitialData = async () => {
+            try {
+                const [planRes, journalRes] = await Promise.all([
+                    api.get('/tools/goal-plan'),
+                    api.get('/journal/today')
+                ]);
+                if (planRes.data && planRes.data.plan) setSavedPlan(planRes.data);
+                if (journalRes.data && journalRes.data.content) setJournalInput(journalRes.data.content);
+            } catch (err) {
+                console.error("Could not fetch initial tool data", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadInitialData();
+    }, []);
+    
     const handleGeneratePlan = async () => {
         if (!goalInput) return;
-        setIsGeneratingGoal(true);
-        setGoalOutput('');
-        const prompt = `Break down this task for a college student into a simple, actionable checklist: "${goalInput}"`;
-        const result = await callGeminiAPI(prompt);
-        setGoalOutput(result);
-        setIsGeneratingGoal(false);
+        setIsGenerating(true);
+        try {
+            const res = await api.post('/tools/goal-setter', { goal: goalInput });
+            setSavedPlan(res.data);
+        } catch (err) { console.error("Failed to generate plan", err); }
+        setIsGenerating(false);
+        setGoalInput('');
     };
-
-    const handleSummarizeJournal = async () => {
-        if (!journalInput) return;
+    
+    const handleClearPlan = async () => {
+        try {
+            await api.delete('/tools/goal-plan');
+            setSavedPlan(null);
+        } catch (err) { console.error("Failed to clear plan", err); }
+    };
+    
+    const handleSaveEntry = async () => {
+        if (!journalInput.trim()) return;
+        setIsSaving(true);
+        try { await api.post('/journal', { content: journalInput }); } 
+        finally { setIsSaving(false); }
+    };
+    
+    const handleAnalyzeDay = async () => {
         setIsSummarizing(true);
-        setJournalOutput('');
-        const prompt = `Analyze these journal entries from a college student and provide a gentle, high-level summary of emotional trends. Do not quote directly. Entries: "${journalInput}"`;
-        const result = await callGeminiAPI(prompt);
-        setJournalOutput(result);
+        setJournalSummary(null);
+        try {
+            const res = await api.post('/tools/journal-summary'); 
+            setJournalSummary(res.data);
+        } catch (err) {
+            console.error("Failed to summarize journal", err);
+            alert(err.response?.data?.msg || "Could not generate summary.");
+        }
         setIsSummarizing(false);
     };
+    
+    const resetJournal = () => {
+        setJournalSummary(null);
+        setJournalInput('');
+    };
+    
+    if (isLoading) {
+        return <div className="p-8 flex items-center justify-center"><SpinnerIcon color="text-[#00A896]" /></div>;
+    }
+
+    const goalSetterTheme = { bg: 'bg-[#00A896]', text: 'text-[#00A896]', border: 'border-[#00A896]', ring: 'focus:ring-[#00A896]/50', focusBorder: 'focus:border-[#00A896]' };
+    const journalTheme = { bg: 'bg-[#FF9F43]', text: 'text-[#FF9F43]', border: 'border-[#FF9F43]', ring: 'focus:ring-[#FF9F43]/50', focusBorder: 'focus:border-[#FF9F43]' };
 
     return (
-        <div>
-            <h3 className="text-2xl font-bold mb-4">AI-Powered Tools</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* AI Goal Setter Card */}
-                <div className="bg-white p-6 rounded-2xl shadow-lg">
-                    <h4 className="text-xl font-bold">AI Goal Setter</h4>
-                    <p className="text-sm text-gray-500 mb-4">Break down big tasks into small, manageable steps.</p>
-                    <textarea
-                        value={goalInput}
-                        onChange={(e) => setGoalInput(e.target.value)}
-                        className="w-full p-2 border rounded-lg h-24"
-                        placeholder="e.g., I need to prepare for my history final exam..."
-                    ></textarea>
-                    <button
-                        onClick={handleGeneratePlan}
-                        disabled={isGeneratingGoal}
-                        className="mt-2 bg-blue-600 text-white font-semibold px-5 py-2 rounded-lg disabled:bg-blue-400"
-                    >
-                        {isGeneratingGoal ? 'Generating...' : 'Generate Plan'}
-                    </button>
-                    {goalOutput && (
-                        <div className="mt-4 prose prose-sm max-w-none">
-                           <MarkdownChecklist text={goalOutput} />
+        // ✨ MODIFIED: Removed the background color (bg-[#FFF9F0]) from the root div
+        <div className="min-h-full p-8 md:p-12">
+            <h3 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-br from-[#FF9F43] to-[#FF6B6B] bg-clip-text text-transparent">
+                AI-Powered Tools
+            </h3>
+            <p className="mt-3 text-lg text-gray-600 max-w-2xl">Your personal assistants for goal setting and self-reflection.</p>
+
+            <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* --- AI Goal Setter Card --- */}
+                <div className="bg-white p-6 rounded-2xl shadow-xl  border-[#00A896]">
+                    {savedPlan ? (
+                        <div className="animate-fade-in">
+                            <h4 className="text-xl font-bold text-[#2C3E50]">Your Active Plan: <span className={goalSetterTheme.text}>{savedPlan.goal}</span></h4>
+                            <div className="mt-4">
+                                <MarkdownChecklist text={savedPlan.plan} themeColor={goalSetterTheme} />
+                            </div>
+                            <button onClick={handleClearPlan} className="mt-6 text-sm bg-[#FF6B6B]/10 text-[#FF6B6B] font-semibold px-4 py-2 rounded-lg hover:bg-[#FF6B6B]/20 transition">
+                                Clear Plan & Start New
+                            </button>
+                        </div>
+                    ) : (
+                        <div>
+                            <h4 className="text-xl font-bold text-[#2C3E50]">AI Goal Setter</h4>
+                            <p className="text-sm text-gray-500 mb-4 mt-1">Break down big goals into small, manageable steps.</p>
+                            <textarea value={goalInput} onChange={(e) => setGoalInput(e.target.value)} className={`w-full p-3 border border-gray-300 rounded-lg h-24 bg-gray-50 outline-none transition ${goalSetterTheme.ring} ${goalSetterTheme.focusBorder}`} placeholder="e.g., I need to prepare for my history final exam..."></textarea>
+                            <button onClick={handleGeneratePlan} disabled={isGenerating} className={`w-full mt-2 text-white font-bold py-3 rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-70 ${goalSetterTheme.bg}`}>
+                                {isGenerating ? <SpinnerIcon /> : 'Generate Plan'}
+                            </button>
                         </div>
                     )}
                 </div>
 
-                {/* AI Journal Summary Card */}
-                <div className="bg-white p-6 rounded-2xl shadow-lg">
-                    <h4 className="text-xl font-bold">AI Journal Summary</h4>
-                    <p className="text-sm text-gray-500 mb-4">Write in your private journal, then let AI find the patterns.</p>
-                    <textarea
-                        value={journalInput}
-                        onChange={(e) => setJournalInput(e.target.value)}
-                        className="w-full p-2 border rounded-lg h-24"
-                        placeholder="Write about your day..."
-                    ></textarea>
-                    <button
-                        onClick={handleSummarizeJournal}
-                        disabled={isSummarizing}
-                        className="mt-2 bg-purple-600 text-white font-semibold px-5 py-2 rounded-lg disabled:bg-purple-400"
-                    >
-                        {isSummarizing ? 'Summarizing...' : 'Summarize My Week'}
-                    </button>
-                    {journalOutput && (
-                        <div className="mt-4 prose prose-sm max-w-none">
-                            <p>{journalOutput}</p>
+                {/* --- AI Journal Summary Card --- */}
+                <div className="bg-white p-6 rounded-2xl shadow-xl  border-[#FF9F43] flex flex-col">
+                    <h4 className="text-xl font-bold text-[#2C3E50]">Daily AI Journal</h4>
+                    <p className="text-sm text-gray-500 mb-4 mt-1">Write about your day. When you're ready, we'll analyze it for you.</p>
+                    
+                    {journalSummary ? (
+                        <div className="animate-fade-in">
+                           <JournalSummaryDisplay data={journalSummary} />
+                           <button onClick={resetJournal} className={`mt-6 text-sm font-semibold hover:underline ${journalTheme.text}`}>
+                                Start Fresh for a New Day
+                           </button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col flex-grow">
+                            <textarea value={journalInput} onChange={(e) => setJournalInput(e.target.value)} className={`w-full p-3 border border-gray-300 rounded-lg flex-grow bg-gray-50 outline-none transition ${journalTheme.ring} ${journalTheme.focusBorder}`} placeholder="Write about your day... your thoughts, feelings, and events."></textarea>
+                            <div className="flex items-center justify-between mt-2">
+                                <button onClick={handleSaveEntry} disabled={isSaving} className="text-sm bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-lg disabled:opacity-50 transition">
+                                    {isSaving ? 'Saving...' : 'Save Entry'}
+                                </button>
+                                <button onClick={handleAnalyzeDay} disabled={isSummarizing || !journalInput.trim()} className={`font-semibold px-4 py-2 rounded-lg text-white transition-all shadow-md hover:shadow-lg disabled:opacity-70 ${journalTheme.bg}`}>
+                                    {isSummarizing ? 'Analyzing...' : "Analyze My Day"}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

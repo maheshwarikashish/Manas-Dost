@@ -1,20 +1,45 @@
-import React, { useState } from 'react';
-// Assuming you have these files from previous steps
-import { journeys as predefinedJourneys } from '../../data/mockData';
-import { callGeminiAPI } from '../../services/geminiAPI';
+import React, { useState, useEffect } from 'react';
+import api from '../../services/api';
+
+// --- SVG Icons ---
+const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>;
+const SparklesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>;
+const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>;
+const CalmIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5a.75.75 0 01-.75-.75zM8.25 12a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5a.75.75 0 01-.75-.75zM12.75 12a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5a.75.75 0 01-.75-.75zM18.75 12h-1.5a.75.75 0 000 1.5h1.5a.75.75 0 000-1.5z" /></svg>;
+const FocusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M12 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const ChevronRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
+const SpinnerIcon = () => <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+
+const journeyThemes = {
+    anxiety: { colors: { bg: 'bg-[#00A896]', text: 'text-[#00A896]', border: 'border-[#00A896]' }, icon: <CalmIcon /> },
+    focus: { colors: { bg: 'bg-[#FF9F43]', text: 'text-[#FF9F43]', border: 'border-[#FF9F43]' }, icon: <FocusIcon /> },
+};
 
 const JourneysTab = () => {
-    // 'selection' shows the list of journeys, 'display' shows the selected one's tasks
     const [view, setView] = useState('selection');
+    const [predefinedJourneys, setPredefinedJourneys] = useState({});
     const [currentJourney, setCurrentJourney] = useState(null);
     const [customInput, setCustomInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isFetching, setIsFetching] = useState(true);
+
+    useEffect(() => {
+        const fetchJourneys = async () => {
+            try {
+                const res = await api.get('/journeys');
+                setPredefinedJourneys(res.data);
+            } catch (err) { console.error("Failed to fetch journeys", err); }
+            finally { setIsFetching(false); }
+        };
+        fetchJourneys();
+    }, []);
 
     const handleSelectJourney = (journeyKey) => {
         const journeyData = predefinedJourneys[journeyKey];
         setCurrentJourney({
             ...journeyData,
-            tasks: journeyData.tasks.map(task => ({ ...task, completed: false }))
+            tasks: journeyData.tasks.map(task => ({ ...task, completed: false })),
+            theme: journeyThemes[journeyKey] || Object.values(journeyThemes)[0]
         });
         setView('display');
     };
@@ -22,22 +47,16 @@ const JourneysTab = () => {
     const handleGenerateCustom = async () => {
         if (!customInput) return;
         setIsLoading(true);
-        const prompt = `Create a 7-day wellness challenge for a college student with the goal: "${customInput}". Provide a title, a one-sentence description, and exactly 7 daily tasks. Format as: Title: [Your Title]\nDescription: [Your Description]\nDay 1: [Task 1]\nDay 2: [Task 2]...`;
-        
-        const result = await callGeminiAPI(prompt);
-        setIsLoading(false);
-
         try {
-            const lines = result.split('\n');
-            const title = lines[0].replace('Title: ', '');
-            const description = lines[1].replace('Description: ', '');
-            const tasks = lines.slice(2).map(line => ({ task: line.replace(/Day \d: /, ''), completed: false }));
-            
-            setCurrentJourney({ title, description, tasks });
+            const res = await api.post('/journeys/custom', { goal: customInput });
+            setCurrentJourney({
+                ...res.data,
+                tasks: res.data.tasks.map(task => ({ ...task, completed: false })),
+                theme: { colors: { bg: 'bg-[#FF6B6B]', text: 'text-[#FF6B6B]', border: 'border-[#FF6B6B]' } }
+            });
             setView('display');
-        } catch (e) {
-            alert("Sorry, could not generate a custom plan. Please try a different goal.");
-        }
+        } catch (err) { alert("Sorry, could not generate a custom plan."); }
+        setIsLoading(false);
     };
 
     const handleToggleTask = (taskIndex) => {
@@ -49,67 +68,84 @@ const JourneysTab = () => {
 
     if (view === 'display') {
         return (
-            <div>
-                <button onClick={() => setView('selection')} className="mb-4 text-blue-600 hover:underline">
-                    ← Back to Journeys
+            // ✨ MODIFIED: Removed background color and blobs
+            <div className="animate-fade-in p-8 md:p-12 min-h-full">
+                <button 
+                    onClick={() => setView('selection')} 
+                    className="flex items-center text-sm font-semibold text-gray-600 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all mb-10"
+                >
+                    <ArrowLeftIcon />
+                    Back to All Journeys
                 </button>
-                <div className="bg-white p-6 rounded-2xl shadow-lg">
-                    <h4 className="text-2xl font-bold">{currentJourney.title}</h4>
-                    <p className="text-sm text-gray-500 mb-6">{currentJourney.description}</p>
-                    <div className="space-y-4">
-                        {currentJourney.tasks.map((item, index) => (
-                            <div key={index} className="flex items-center space-x-4 p-3 rounded-lg border">
-                                <input 
-                                    type="checkbox" 
-                                    id={`task-${index}`} 
-                                    checked={item.completed}
-                                    onChange={() => handleToggleTask(index)}
-                                    className="h-5 w-5 rounded text-blue-600 focus:ring-blue-500"
-                                />
-                                <label htmlFor={`task-${index}`} className={`font-semibold ${item.completed ? "line-through text-gray-500" : ""}`}>
-                                    {item.task}
-                                </label>
-                            </div>
-                        ))}
-                    </div>
+                <h1 className={`text-4xl md:text-5xl font-bold ${currentJourney.theme.colors.text}`}>{currentJourney.title}</h1>
+                <p className="text-gray-600 text-lg mt-4 max-w-2xl">{currentJourney.description}</p>
+                <div className="mt-10 space-y-2">
+                    {currentJourney.tasks.map((item, index) => (
+                        <div key={index} className="flex items-center space-x-4 py-4 border-b border-gray-200/80">
+                            <button onClick={() => handleToggleTask(index)} className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200
+                                ${item.completed ? `${currentJourney.theme.colors.bg} ${currentJourney.theme.colors.border}` : 'border-gray-300'}`}
+                            >
+                                {item.completed && <CheckIcon />}
+                            </button>
+                            <span className={`font-medium ${item.completed ? "line-through text-gray-400" : "text-gray-800"}`}>
+                                {item.task}
+                            </span>
+                        </div>
+                    ))}
                 </div>
             </div>
         );
     }
 
     return (
-        <div>
-            <h3 className="text-2xl font-bold mb-4">Choose a Wellness Journey</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div onClick={() => handleSelectJourney('anxiety')} className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition transform cursor-pointer">
-                    <h4 className="text-xl font-bold text-purple-500">Reduce Anxiety</h4>
-                    <p className="text-sm text-gray-500 mt-2">A 7-day plan with calming exercises and mindfulness techniques.</p>
-                </div>
-                <div onClick={() => handleSelectJourney('diet')} className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition transform cursor-pointer">
-                    <h4 className="text-xl font-bold text-green-600">Healthy Diet</h4>
-                    <p className="text-sm text-gray-500 mt-2">A 7-day challenge to build better eating habits for your mind and body.</p>
-                </div>
-                <div onClick={() => handleSelectJourney('exercise')} className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition transform cursor-pointer">
-                    <h4 className="text-xl font-bold text-orange-600">Daily Exercise</h4>
-                    <p className="text-sm text-gray-500 mt-2">A 7-day plan to get your body moving and boost your mood.</p>
-                </div>
-                <div className="bg-white p-6 rounded-2xl shadow-lg">
-                    <h4 className="text-xl font-bold text-gray-700">Customize Your Own</h4>
-                    <p className="text-sm text-gray-500 mt-2">Tell our AI your goal, and it will create a personalized 7-day plan for you!</p>
-                    <input 
-                        type="text" 
-                        value={customInput}
-                        onChange={(e) => setCustomInput(e.target.value)}
-                        className="w-full mt-3 p-2 border rounded-lg" 
-                        placeholder="e.g., 'Be more focused'"
-                    />
-                    <button 
-                        onClick={handleGenerateCustom} 
-                        disabled={isLoading}
-                        className="mt-2 w-full bg-gray-800 text-white font-semibold px-4 py-2 rounded-lg text-sm disabled:bg-gray-400"
-                    >
-                        {isLoading ? 'Creating...' : 'Create My Plan ✨'}
-                    </button>
+        // ✨ MODIFIED: Removed background color and blobs
+        <div className="min-h-full p-8 md:p-12">
+            <h3 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-br from-[#FF9F43] to-[#FF6B6B] bg-clip-text text-transparent">
+                Wellness Journeys
+            </h3>
+            <p className="mt-3 text-lg text-gray-600 max-w-2xl">Choose a guided path or create your own to achieve your wellness goals.</p>
+            
+            <div className="mt-10 border-t border-gray-200">
+                {isFetching ? <p className="py-6 text-gray-500">Loading journeys...</p> : (
+                    <>
+                        {Object.keys(predefinedJourneys).map(key => {
+                            const theme = journeyThemes[key] || Object.values(journeyThemes)[0];
+                            return (
+                                <button key={key} onClick={() => handleSelectJourney(key)} className="w-full text-left flex items-center p-6 border-b border-gray-200/80 group hover:bg-gray-100/50 transition-colors">
+                                    <div className={`mr-6 ${theme.colors.text}`}>{theme.icon}</div>
+                                    <div className="flex-grow">
+                                        <h4 className="text-xl font-bold text-gray-800 group-hover:text-black">{predefinedJourneys[key].title}</h4>
+                                        <p className="text-sm text-gray-500 mt-1">{predefinedJourneys[key].description}</p>
+                                    </div>
+                                    <ChevronRightIcon />
+                                </button>
+                            );
+                        })}
+                    </>
+                )}
+
+                <div className="flex items-center p-6">
+                    <div className={`mr-6 text-[#FF6B6B]`}><SparklesIcon /></div>
+                    <div className="flex-grow">
+                        <h4 className="text-xl font-bold text-gray-800">Customize Your Own</h4>
+                        <p className="text-sm text-gray-500 mt-1">Tell our AI your goal for a personalized plan.</p>
+                        <div className="flex items-center gap-2 mt-4">
+                            <input 
+                                type="text" 
+                                value={customInput}
+                                onChange={(e) => setCustomInput(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9F43]/50 focus:border-[#FF9F43] outline-none transition bg-white/50" 
+                                placeholder="e.g., 'Be more focused'"
+                            />
+                            <button 
+                                onClick={handleGenerateCustom} 
+                                disabled={isLoading}
+                                className="bg-[#FF9F43] text-white font-semibold px-4 py-2 rounded-lg disabled:bg-orange-300 transition-colors flex-shrink-0"
+                            >
+                                {isLoading ? <SpinnerIcon /> : 'Create'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

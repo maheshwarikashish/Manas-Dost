@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
-import { callGeminiAPI } from '../../../services/geminiAPI';
-import { MOCK_CHAT_LOGS } from '../../../data/mockAdminData';
+import api from '../../../services/api'; // Use our central API service
 
 const InsightsTab = () => {
     const [insights, setInsights] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // This function now calls our secure backend endpoint
     const handleGenerateInsights = async () => {
         setIsLoading(true);
         setInsights('');
-        const prompt = `Analyze the following set of anonymous student chat snippets. Identify the top 3-4 recurring themes and, for each theme, provide a one-sentence summary of the core issue. Do not quote directly. Present the output as a simple bulleted list. Snippets:\n\n${MOCK_CHAT_LOGS}`;
-        const result = await callGeminiAPI(prompt);
-        setInsights(result);
+        try {
+            const res = await api.post('/insights/generate');
+            setInsights(res.data.summary);
+        } catch (err) {
+            console.error("Failed to generate insights", err);
+            setInsights("Sorry, we couldn't generate insights at this time.");
+        }
         setIsLoading(false);
     };
 
@@ -20,7 +24,7 @@ const InsightsTab = () => {
             <h3 className="text-3xl font-bold mb-4 text-slate-800">AI-Powered Conversation Insights</h3>
             <div className="bg-white p-6 rounded-2xl shadow-lg">
                 <p className="text-sm text-slate-500 mb-4 max-w-2xl">
-                    Gemini API generates thematic summaries from thousands of anonymous chat logs, protecting privacy while revealing key student concerns.
+                    Generate thematic summaries from the latest anonymous chat logs. This process uses AI to identify key student concerns while protecting user privacy.
                 </p>
                 <button 
                     onClick={handleGenerateInsights}
