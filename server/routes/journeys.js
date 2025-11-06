@@ -1,8 +1,8 @@
-import { Router } from 'express';
-const router = Router();
-import { auth } from '../middleware/auth';
-// ADDED: The import for your AI service, which was likely missing
-import { callGeminiAPI } from '../services/geminiService.js';
+const express = require('express'); // Changed import to require
+const router = express.Router();    // Initialized router using express object
+const { auth } = require('../middleware/auth'); // Changed import to require and removed .js extension
+const GeminiService = require('../services/geminiService'); // Changed import to require
+const { callGeminiAPI } = GeminiService;
 
 // This object contains the full data for the predefined journeys
 const predefinedJourneys = {
@@ -101,4 +101,4 @@ router.post('/custom', auth, async (req, res) => {
     }
 });
 
-export default router;
+module.exports = router;
