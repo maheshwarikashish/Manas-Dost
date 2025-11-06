@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create a new Axios instance with a base URL
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api'
+  baseURL: 'https://manas-dost-2.onrender.com',
 });
 
 // This interceptor automatically attaches the auth token to every request
