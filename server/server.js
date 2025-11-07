@@ -38,7 +38,7 @@ const corsOptions = {
 // --- CORS Fix for Preflight Requests ---
 // <<< UPDATED >>> Explicitly enable CORS for all preflight OPTIONS requests.
 // This is often needed when using whitelisting.
-app.options('*', cors(corsOptions)); 
+app.options('/', cors(corsOptions));
 
 // --- Middleware ---
 // Apply the custom CORS middleware
