@@ -47,50 +47,90 @@ const HomeTab = ({ user, navigateToTab }) => {
         }
     };
 
-    // --- The rest of the component's logic and JSX remains the same ---
-    const moodMap = { '😞': 1, '😕': 2, '😐': 3, '🙂': 4, '😊': 5 };
-    const emojiMap = ['?', '😞', '😕', '😐', '🙂', '😊'];
-    
     const getGreeting = () => {
         const hour = new Date().getHours();
         if (hour < 12) return "Good morning";
         if (hour < 18) return "Good afternoon";
         return "Good evening";
     };
+// ... (imports and useState/useEffect hooks remain unchanged)
+
+    // --- The rest of the component's logic and JSX remains the same ---
+    const moodMap = { '😞': 1, '😕': 2, '😐': 3, '🙂': 4, '😊': 5 };
+    const emojiMap = ['?', '😞', '😕', '😐', '🙂', '😊'];
+    
+    // ... (getGreeting and handleMoodSelect remain unchanged)
 
     const getChartData = () => {
-        const now = new Date(); let startDate = new Date(); let labels = []; let dataPoints = [];
+        const now = new Date();
+        const nowStr = now.toISOString().split('T')[0];
+        let labels = [];
+        let dataPoints = [];
+        
+        // Create a map for quick lookup: {"YYYY-MM-DD": moodValue}
+        const moodLookup = moodHistory.reduce((acc, entry) => {
+            acc[entry.date] = entry.mood;
+            return acc;
+        }, {});
+
+        // Helper function to format date keys for lookup
+        const formatDateKey = (date) => date.toISOString().split('T')[0];
+
         if (chartTimeframe === 'week') {
+            let startDate = new Date();
             startDate.setDate(now.getDate() - 6);
-            labels = Array.from({ length: 7 }).map((_, i) => { const d = new Date(startDate); d.setDate(startDate.getDate() + i); return d.toLocaleDateString('en-US', { weekday: 'short' }); });
-            const weekData = Array(7).fill(null);
-            moodHistory.forEach(entry => {
-                const entryDate = new Date(entry.date);
-                if (entryDate >= startDate && entryDate <= now) {
-                    const dayIndex = Math.floor((entryDate - startDate) / (1000 * 60 * 60 * 24));
-                    if (dayIndex >= 0 && dayIndex < 7) { weekData[dayIndex] = entry.mood; }
-                }
-            }); dataPoints = weekData;
+            
+            // Generate labels and data points for the last 7 days
+            for (let i = 0; i < 7; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                
+                const dateKey = formatDateKey(currentDate);
+
+                // Label: Mon, Tue, Wed...
+                labels.push(currentDate.toLocaleDateString('en-US', { weekday: 'short' }));
+                
+                // Data: Look up mood value, or use null if no entry
+                dataPoints.push(moodLookup[dateKey] || null);
+            }
+
         } else if (chartTimeframe === 'month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            // Find the start date of the current month
+            let startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-            labels = Array.from({ length: daysInMonth }).map((_, i) => i + 1);
-            const monthData = Array(daysInMonth).fill(null);
-            moodHistory.forEach(entry => {
-                const entryDate = new Date(entry.date);
-                if (entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear()) { monthData[entryDate.getDate() - 1] = entry.mood; }
-            }); dataPoints = monthData;
+            
+            // Generate labels (1, 2, 3...) and data points for the month
+            for (let i = 0; i < daysInMonth; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                
+                const dateKey = formatDateKey(currentDate);
+                
+                labels.push(i + 1); // Day number (1 to 31)
+                
+                // Data: Look up mood value, or use null
+                dataPoints.push(moodLookup[dateKey] || null);
+            }
+
         } else if (chartTimeframe === 'year') {
             labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const yearData = Array(12).fill(0); const counts = Array(12).fill(0);
+            const yearData = Array(12).fill(0); 
+            const counts = Array(12).fill(0);
+            
+            // Calculate the average mood per month
             moodHistory.forEach(entry => {
                 const entryDate = new Date(entry.date);
                 if (entryDate.getFullYear() === now.getFullYear()) {
                     const monthIndex = entryDate.getMonth();
-                    yearData[monthIndex] += entry.mood; counts[monthIndex]++;
+                    yearData[monthIndex] += entry.mood; 
+                    counts[monthIndex]++;
                 }
-            }); dataPoints = yearData.map((total, i) => counts[i] > 0 ? (total / counts[i]) : null);
+            }); 
+            
+            // Ensure null is used for months with no data
+            dataPoints = yearData.map((total, i) => counts[i] > 0 ? (total / counts[i]) : null);
         }
+
         return {
             labels, datasets: [{
                 label: 'Mood Level', data: dataPoints, borderColor: '#0ea5e9',
@@ -99,6 +139,7 @@ const HomeTab = ({ user, navigateToTab }) => {
         };
     };
     
+// ... (The rest of the component remains unchanged)
     const chartOptions = { responsive: true, plugins: { legend: { display: false } }, scales: { y: { min: 1, max: 5, ticks: { padding: 10, font: { size: 14 }, callback: (value) => emojiMap[value] } } } };
 
     const ForYouSection = () => {
