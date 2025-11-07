@@ -1,8 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
-import api from '../../services/api'; // Import the central API service
+import api from '../../services/api'; 
 
-// REMOVED: The mock data generator is no longer needed.
+// 💡 NECESSARY CHART.JS IMPORTS AND REGISTRATION
+// These imports are required for the Line chart and the 'fill' option to work.
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler, // CRITICAL: For the fill: true option
+} from 'chart.js';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler // CRITICAL: Register the Filler plugin
+);
 
 const HomeTab = ({ user, navigateToTab }) => {
     const [selectedMood, setSelectedMood] = useState(null);
@@ -10,17 +33,16 @@ const HomeTab = ({ user, navigateToTab }) => {
     const [chartTimeframe, setChartTimeframe] = useState('week');
     const [showMoodOverview, setShowMoodOverview] = useState(false);
 
-    // MODIFIED: This useEffect hook now fetches real mood history from the backend
+    const moodMap = { '😞': 1, '😕': 2, '😐': 3, '🙂': 4, '😊': 5 };
+    const emojiMap = ['?', '😞', '😕', '😐', '🙂', '😊'];
+
+    // 1. ⚙️ MODIFIED: Fetch real mood history with full timestamps
     useEffect(() => {
         const fetchMoodHistory = async () => {
             try {
                 const res = await api.get('/mood/history');
-                // Format the data from the backend to match what the chart expects
-                const formattedHistory = res.data.map(entry => ({
-                    date: entry.date.split('T')[0], // "YYYY-MM-DD"
-                    mood: entry.mood
-                }));
-                setMoodHistory(formattedHistory);
+                // CRITICAL: Store the data as received (objects with full ISO 'date' string and 'mood')
+                setMoodHistory(res.data);
             } catch (err) {
                 console.error("Failed to fetch mood history", err);
             }
@@ -28,22 +50,20 @@ const HomeTab = ({ user, navigateToTab }) => {
         fetchMoodHistory();
     }, []);
 
-    // MODIFIED: This function now saves the selected mood to the database
+    // 2. ➕ MODIFIED: Handle saving a new mood (creates a new entry with full timestamp)
     const handleMoodSelect = async (moodEmoji) => {
         const moodValue = moodMap[moodEmoji];
         setSelectedMood(moodEmoji);
         
-        // Step 1: Update the UI immediately for a responsive feel
-        const todayStr = new Date().toISOString().split('T')[0];
-        const newEntry = { date: todayStr, mood: moodValue };
-        setMoodHistory([newEntry, ...moodHistory.filter(entry => entry.date !== todayStr)]);
-
-        // Step 2: Send the new mood to the backend to be saved
         try {
-            await api.post('/mood', { mood: moodValue });
+            const res = await api.post('/mood', { mood: moodValue });
+            
+            // Update the UI by prepending the newly saved entry (with its new timestamp)
+            const newEntry = res.data; 
+            setMoodHistory(prevHistory => [newEntry, ...prevHistory]);
+
         } catch (err) {
             console.error("Failed to save mood", err);
-            // Optional: You could add logic here to revert the UI change if the save fails
         }
     };
 
@@ -53,94 +73,135 @@ const HomeTab = ({ user, navigateToTab }) => {
         if (hour < 18) return "Good afternoon";
         return "Good evening";
     };
-// ... (imports and useState/useEffect hooks remain unchanged)
 
-    // --- The rest of the component's logic and JSX remains the same ---
-    const moodMap = { '😞': 1, '😕': 2, '😐': 3, '🙂': 4, '😊': 5 };
-    const emojiMap = ['?', '😞', '😕', '😐', '🙂', '😊'];
-    
-    // ... (getGreeting and handleMoodSelect remain unchanged)
-
+    // 3. 📊 MODIFIED: Reworked getChartData for hourly (week) and daily/monthly averages
     const getChartData = () => {
         const now = new Date();
-        const nowStr = now.toISOString().split('T')[0];
         let labels = [];
         let dataPoints = [];
         
-        // Create a map for quick lookup: {"YYYY-MM-DD": moodValue}
-        const moodLookup = moodHistory.reduce((acc, entry) => {
-            acc[entry.date] = entry.mood;
-            return acc;
-        }, {});
-
-        // Helper function to format date keys for lookup
-        const formatDateKey = (date) => date.toISOString().split('T')[0];
+        // Convert date strings to Date objects for easier manipulation
+        const filteredHistory = moodHistory.map(entry => ({ 
+            ...entry, 
+            date: new Date(entry.date) 
+        }));
 
         if (chartTimeframe === 'week') {
-            let startDate = new Date();
-            startDate.setDate(now.getDate() - 6);
+            // Display mood changes over the last 7 days, with hourly precision
+            const MS_PER_DAY = 24 * 60 * 60 * 1000;
+            const sevenDaysAgo = now.getTime() - (7 * MS_PER_DAY);
             
-            // Generate labels and data points for the last 7 days
-            for (let i = 0; i < 7; i++) {
-                const currentDate = new Date(startDate);
-                currentDate.setDate(startDate.getDate() + i);
-                
-                const dateKey = formatDateKey(currentDate);
+            // Filter data to only the last 7 days
+            const weekData = filteredHistory.filter(entry => entry.date.getTime() >= sevenDaysAgo);
 
-                // Label: Mon, Tue, Wed...
-                labels.push(currentDate.toLocaleDateString('en-US', { weekday: 'short' }));
-                
-                // Data: Look up mood value, or use null if no entry
-                dataPoints.push(moodLookup[dateKey] || null);
+            // Sort by time, oldest first
+            weekData.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+            // Labels will be the date and time of the entry (for hourly view)
+            labels = weekData.map(entry => 
+                entry.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + 
+                ' ' + 
+                entry.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+            );
+
+            dataPoints = weekData.map(entry => entry.mood);
+            
+            // Handle no data case
+            if (dataPoints.length === 0) {
+                 labels = ['No recent data'];
+                 dataPoints = [null];
             }
 
-        } else if (chartTimeframe === 'month') {
-            // Find the start date of the current month
-            let startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        } else if (chartTimeframe === 'month' || chartTimeframe === 'year') {
+            // For Month and Year, we return to plotting AVERAGES per day/month
             
-            // Generate labels (1, 2, 3...) and data points for the month
-            for (let i = 0; i < daysInMonth; i++) {
-                const currentDate = new Date(startDate);
-                currentDate.setDate(startDate.getDate() + i);
-                
-                const dateKey = formatDateKey(currentDate);
-                
-                labels.push(i + 1); // Day number (1 to 31)
-                
-                // Data: Look up mood value, or use null
-                dataPoints.push(moodLookup[dateKey] || null);
+            let timeUnit;
+            if (chartTimeframe === 'month') {
+                timeUnit = 'day';
+            } else { // year
+                timeUnit = 'month';
             }
 
-        } else if (chartTimeframe === 'year') {
-            labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const yearData = Array(12).fill(0); 
-            const counts = Array(12).fill(0);
-            
-            // Calculate the average mood per month
-            moodHistory.forEach(entry => {
-                const entryDate = new Date(entry.date);
-                if (entryDate.getFullYear() === now.getFullYear()) {
-                    const monthIndex = entryDate.getMonth();
-                    yearData[monthIndex] += entry.mood; 
-                    counts[monthIndex]++;
+            // Group data by the relevant time unit (day or month)
+            const groupedData = filteredHistory.reduce((acc, entry) => {
+                let key;
+                if (timeUnit === 'day') {
+                    key = entry.date.toISOString().split('T')[0]; // YYYY-MM-DD
+                } else { // month
+                    key = `${entry.date.getFullYear()}-${entry.date.getMonth()}`; // YYYY-MonthIndex
                 }
-            }); 
-            
-            // Ensure null is used for months with no data
-            dataPoints = yearData.map((total, i) => counts[i] > 0 ? (total / counts[i]) : null);
+                
+                if (!acc[key]) acc[key] = { total: 0, count: 0, date: entry.date };
+                acc[key].total += entry.mood;
+                acc[key].count++;
+                return acc;
+            }, {});
+
+            // Prepare the final chart data based on the timeframe range
+            if (chartTimeframe === 'month') {
+                let startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                
+                for (let i = 0; i < daysInMonth; i++) {
+                    const currentDate = new Date(startDate);
+                    currentDate.setDate(startDate.getDate() + i);
+                    
+                    const dateKey = currentDate.toISOString().split('T')[0];
+                    const data = groupedData[dateKey];
+
+                    labels.push(currentDate.getDate()); // Day number
+                    dataPoints.push(data ? data.total / data.count : null);
+                }
+            } else { // year
+                const yearLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                for (let i = 0; i < 12; i++) {
+                    const monthKey = `${now.getFullYear()}-${i}`;
+                    const data = groupedData[monthKey];
+
+                    labels.push(yearLabels[i]);
+                    dataPoints.push(data ? data.total / data.count : null);
+                }
+            }
         }
 
         return {
             labels, datasets: [{
-                label: 'Mood Level', data: dataPoints, borderColor: '#0ea5e9',
-                backgroundColor: 'rgba(14, 165, 233, 0.1)', fill: true, tension: 0.4, spanGaps: true,
+                label: chartTimeframe === 'week' ? 'Mood Level' : 'Average Mood Level', 
+                data: dataPoints, 
+                borderColor: '#0ea5e9',
+                backgroundColor: 'rgba(14, 165, 233, 0.1)', 
+                fill: true, // This now works due to the Filler plugin registration
+                tension: 0.2, 
+                spanGaps: false,
             }],
         };
     };
     
-// ... (The rest of the component remains unchanged)
-    const chartOptions = { responsive: true, plugins: { legend: { display: false } }, scales: { y: { min: 1, max: 5, ticks: { padding: 10, font: { size: 14 }, callback: (value) => emojiMap[value] } } } };
+    const chartOptions = { 
+        responsive: true, 
+        plugins: { 
+            legend: { display: false } 
+        }, 
+        scales: { 
+            y: { 
+                min: 1, 
+                max: 5, 
+                ticks: { 
+                    padding: 10, 
+                    font: { size: 14 }, 
+                    callback: (value) => emojiMap[value] 
+                } 
+            },
+            x: {
+                // Adjust x-axis ticks for better display of time/dates
+                ticks: {
+                    autoSkip: chartTimeframe === 'week', // Auto-skip if it's the busy week view
+                    maxRotation: chartTimeframe === 'week' ? 90 : 0, // Rotate labels for hourly view
+                    minRotation: chartTimeframe === 'week' ? 90 : 0,
+                }
+            }
+        } 
+    };
 
     const ForYouSection = () => {
         if (!selectedMood) return null;
