@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import api from '../../services/api'; 
 
-// 💡 NECESSARY CHART.JS IMPORTS AND REGISTRATION (Kept to prevent the 'fill' error)
+// 💡 NECESSARY CHART.JS IMPORTS AND REGISTRATION
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -30,22 +29,19 @@ ChartJS.register(
 const HomeTab = ({ user, navigateToTab }) => {
     const [selectedMood, setSelectedMood] = useState(null);
     const [moodHistory, setMoodHistory] = useState([]);
-    // MODIFIED: Default to 'day' or 'week' (kept 'week' to minimize changes)
-    const [chartTimeframe, setChartTimeframe] = useState('week'); 
-    const [showMoodOverview, setShowMoodOverview] = useState(false);
+    const [chartTimeframe, setChartTimeframe] = useState('day'); // Default to 'day' view
+    const [showMoodOverview, setShowMoodOverview] = useState(true); // Default to showing overview
 
     const moodMap = { '😞': 1, '😕': 2, '😐': 3, '🙂': 4, '😊': 5 };
     const emojiMap = ['?', '😞', '😕', '😐', '🙂', '😊'];
 
-    // 1. ⚙️ CLEANED: Fetches mood history. Expects data formatted for day-wise aggregation.
-    // NOTE: This assumes your backend has been reverted to return day-wise data for month/year views.
+    // 1. ⚙️ Fetches mood history with full timestamps
     useEffect(() => {
         const fetchMoodHistory = async () => {
             try {
                 const res = await api.get('/mood/history');
-                // Data mapping is back to what it was: "YYYY-MM-DD" string date
+                // CRITICAL: Ensure the full date string is preserved for time calculations
                 const formattedHistory = res.data.map(entry => ({
-                    // We assume the backend now returns the full date string with time for better handling
                     date: entry.date, 
                     mood: entry.mood
                 }));
@@ -57,13 +53,11 @@ const HomeTab = ({ user, navigateToTab }) => {
         fetchMoodHistory();
     }, []);
 
-    // 2. ➕ CLEANED: Handle saving a new mood. Sends the mood, then fetches fresh data.
+    // 2. ➕ Handles mood selection and saves to DB
     const handleMoodSelect = async (moodEmoji) => {
         const moodValue = moodMap[moodEmoji];
         setSelectedMood(moodEmoji);
         
-        // Optimistic UI update (optional, but good for responsiveness)
-        // NOTE: This logic assumes the POST route handles the date stamping correctly
         try {
             await api.post('/mood', { mood: moodValue });
             
@@ -74,13 +68,15 @@ const HomeTab = ({ user, navigateToTab }) => {
                 mood: entry.mood
             }));
             setMoodHistory(formattedHistory);
+            
+            // Show the overview immediately after logging mood
+            setShowMoodOverview(true); 
 
         } catch (err) {
             console.error("Failed to save mood", err);
         }
     };
     
-    // ... (getGreeting remains unchanged)
     const getGreeting = () => {
         const hour = new Date().getHours();
         if (hour < 12) return "Good morning";
@@ -88,52 +84,52 @@ const HomeTab = ({ user, navigateToTab }) => {
         return "Good evening";
     };
 
-    // Helper function to get the YYYY-MM-DD key from a Date object or ISO string
+    // Helper function to get the YYYY-MM-DD key (based on UTC day)
     const getDateKey = (dateInput) => {
         const date = new Date(dateInput);
         return date.toISOString().split('T')[0];
     };
 
-    // 3. 📊 MODIFIED: getChartData now includes 'day' option
+    // 3. 📊 Reworked getChartData
     const getChartData = () => {
         const now = new Date();
         let labels = [];
         let dataPoints = [];
         
-        // Prepare data: { "YYYY-MM-DD": [ {mood: 4, date: Date object}, ... ], ... }
-        // This groups all entries (including multiple per day) for flexible use
+        // Group data, creating Date objects only once for efficiency
         const groupedByDay = moodHistory.reduce((acc, entry) => {
-            const dateKey = getDateKey(entry.date);
+            const entryDate = new Date(entry.date);
+            const dateKey = entryDate.toISOString().split('T')[0]; // UTC Day key
+            
             if (!acc[dateKey]) acc[dateKey] = [];
-            acc[dateKey].push({ mood: entry.mood, date: new Date(entry.date) });
+            acc[dateKey].push({ mood: entry.mood, date: entryDate });
             return acc;
         }, {});
 
-        // --- NEW: 'day' timeframe logic (Hourly plot for today) ---
+        // --- 'day' timeframe logic (Hourly plot for today) ---
         if (chartTimeframe === 'day') {
-            const todayKey = getDateKey(now);
+            const todayKey = now.toISOString().split('T')[0];
             const todayEntries = groupedByDay[todayKey] || [];
             
-            // Sort entries chronologically for time series chart
             todayEntries.sort((a, b) => a.date.getTime() - b.date.getTime());
 
             labels = todayEntries.map(entry => 
-                entry.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+                // CRITICAL FIX: Use 'en-IN' or similar locale if needed, but toLocaleTimeString() 
+                // relies on the correct time being in the Date object, which is now verified.
+                entry.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) 
             );
             dataPoints = todayEntries.map(entry => entry.mood);
 
-            // If no data for today, show 24 hours as labels
             if (dataPoints.length === 0) {
-                 labels = Array.from({ length: 24 }).map((_, i) => `${String(i).padStart(2, '0')}:00`);
-                 dataPoints = Array(24).fill(null);
+                 labels = ['No data yet'];
+                 dataPoints = [null];
             }
 
-        // --- Original 'week' logic (Averages or latest mood per day) ---
+        // --- 'week' logic (Daily averages) ---
         } else if (chartTimeframe === 'week') {
             let startDate = new Date();
             startDate.setDate(now.getDate() - 6);
             
-            // Generate labels and data points for the last 7 days
             for (let i = 0; i < 7; i++) {
                 const currentDate = new Date(startDate);
                 currentDate.setDate(startDate.getDate() + i);
@@ -143,7 +139,6 @@ const HomeTab = ({ user, navigateToTab }) => {
                 
                 const entries = groupedByDay[dateKey];
                 if (entries && entries.length > 0) {
-                    // Calculate daily average mood (best practice for aggregated views)
                     const avgMood = entries.reduce((sum, entry) => sum + entry.mood, 0) / entries.length;
                     dataPoints.push(avgMood);
                 } else {
@@ -151,7 +146,7 @@ const HomeTab = ({ user, navigateToTab }) => {
                 }
             }
 
-        // --- Original 'month' logic (Daily averages) ---
+        // --- 'month' logic (Daily averages) ---
         } else if (chartTimeframe === 'month') {
             let startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -172,7 +167,7 @@ const HomeTab = ({ user, navigateToTab }) => {
                 }
             }
 
-        // --- Original 'year' logic (Monthly averages) ---
+        // --- 'year' logic (Monthly averages) ---
         } else if (chartTimeframe === 'year') {
             labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const yearData = Array(12).fill(0); 
@@ -198,7 +193,7 @@ const HomeTab = ({ user, navigateToTab }) => {
                 borderColor: '#0ea5e9',
                 backgroundColor: 'rgba(14, 165, 233, 0.1)', 
                 fill: true, 
-                tension: 0.4, 
+                tension: chartTimeframe === 'day' ? 0.2 : 0.4, // Smoother line for time data
                 spanGaps: true,
             }],
         };
@@ -207,12 +202,23 @@ const HomeTab = ({ user, navigateToTab }) => {
     const chartOptions = { 
         responsive: true, 
         plugins: { 
-            legend: { display: false } 
+            legend: { display: false },
+            tooltip: {
+                // Adjust tooltip to show the emoji label
+                callbacks: {
+                    label: function(context) {
+                        return `${context.dataset.label}: ${emojiMap[context.parsed.y]}`;
+                    }
+                }
+            }
         }, 
         scales: { 
             y: { 
                 min: 1, 
                 max: 5, 
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)',
+                },
                 ticks: { 
                     padding: 10, 
                     font: { size: 14 }, 
@@ -220,11 +226,15 @@ const HomeTab = ({ user, navigateToTab }) => {
                 } 
             },
             x: {
+                grid: {
+                    display: false, // Cleaner X-axis grid
+                },
                 // Adjust x-axis ticks for better display of hourly data
                 ticks: {
-                    autoSkip: chartTimeframe === 'day', 
-                    maxRotation: chartTimeframe === 'day' ? 90 : 0, 
-                    minRotation: chartTimeframe === 'day' ? 90 : 0,
+                    autoSkip: chartTimeframe !== 'day', // Only auto-skip for week/month/year
+                    maxRotation: chartTimeframe === 'day' ? 45 : 0, 
+                    minRotation: chartTimeframe === 'day' ? 45 : 0,
+                    font: { size: 11 }
                 }
             }
         } 
@@ -242,13 +252,13 @@ const HomeTab = ({ user, navigateToTab }) => {
             default: return null;
         }
         return (
-            <div className="w-full animate-fade-in text-center">
+            <div className="w-full animate-fade-in text-center p-4">
                 <hr className="my-6 border-slate-200" />
-                <h4 className="text-xl font-bold text-slate-700 mb-1">{content.title}</h4>
-                <p className="text-base text-slate-600 my-2 max-w-sm mx-auto">{content.desc}</p>
-                <div className="mt-4">
+                <h4 className="text-xl font-semibold text-slate-800 mb-2">{content.title}</h4>
+                <p className="text-base text-slate-600 max-w-sm mx-auto">{content.desc}</p>
+                <div className="mt-4 flex justify-center">
                     {content.actions.map(action => (
-                        <button key={action.tab} onClick={() => navigateToTab(action.tab)} className={`text-white font-semibold px-5 py-2.5 rounded-lg text-base transition ${action.color}`}>
+                        <button key={action.tab} onClick={() => navigateToTab(action.tab)} className={`text-white font-medium px-4 py-2 rounded-xl text-sm transition shadow-md ${action.color}`}>
                             {action.label}
                         </button>
                     ))}
@@ -258,51 +268,50 @@ const HomeTab = ({ user, navigateToTab }) => {
     };
 
     return (
-        <div className="py-6">
-            <div className="w-full max-w-3xl mx-auto px-4 space-y-8">
-                <div className="text-center">
-                    <h2 className="text-3xl font-bold text-slate-700 tracking-tight">
-                        {getGreeting()}, <span className="text-sky-500">{user?.name?.split(' ')[0]}</span>
+        <div className="min-h-screen bg-gray-50 py-8">
+            <div className="w-full max-w-3xl mx-auto px-4 space-y-6">
+                
+                {/* 1. Header and Mood Selection */}
+                <div className="bg-white p-6 rounded-3xl shadow-lg text-center">
+                    <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">
+                        {getGreeting()}, <span className="text-sky-600">{user?.name?.split(' ')[0]}</span>
                     </h2>
-                    <p className="text-base text-slate-500 mt-2 mb-4">How are you feeling today?</p>
-                    <div className="flex justify-center items-center space-x-2 md:space-x-3">
+                    <p className="text-base text-slate-500 mt-2 mb-6">Log your mood for insight.</p>
+                    
+                    {/* Mood Emojis */}
+                    <div className="flex justify-center items-center space-x-3 md:space-x-5">
                         {Object.keys(moodMap).map(emoji => (
                             <button
                                 key={emoji}
                                 onClick={() => handleMoodSelect(emoji)}
-                                className={`text-4xl p-2 rounded-full transition-all duration-200 transform ${selectedMood === emoji ? 'bg-sky-100 scale-110' : 'hover:bg-slate-100 hover:scale-105'}`}
+                                className={`text-5xl p-3 rounded-full transition-all duration-300 transform 
+                                    ${selectedMood === emoji 
+                                        ? 'ring-4 ring-sky-300 bg-sky-50 shadow-xl scale-110' 
+                                        : 'hover:bg-slate-100 hover:scale-105'}`}
                             >
                                 {emoji}
                             </button>
                         ))}
                     </div>
+                    
+                    {/* For You Section */}
                     <ForYouSection />
                 </div>
-                {!showMoodOverview && (
-                    <div className="bg-slate-100 p-5 rounded-2xl text-center animate-fade-in">
-                         <h3 className="text-lg font-bold text-slate-700">Track Your Wellness Journey</h3>
-                         <p className="text-slate-500 mt-1 mb-4 text-xs">Visualize your mood patterns to gain valuable insights.</p>
-                         <button 
-                            onClick={() => setShowMoodOverview(true)} 
-                            className="bg-sky-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-sky-600 transition text-sm"
-                        >
-                           View My Mood Overview
-                        </button>
-                    </div>
-                )}
+
+                {/* 2. Mood Overview Chart */}
                 {showMoodOverview && (
-                    <div className="w-full bg-white p-4 sm:p-6 rounded-2xl shadow-lg animate-fade-in">
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
-                            <h3 className="text-lg font-bold text-slate-700">Your Mood Overview</h3>
-                            {/* MODIFIED: Added 'Day' button */}
-                            <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg">
-                                <button onClick={() => setChartTimeframe('day')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'day' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Day</button>
-                                <button onClick={() => setChartTimeframe('week')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'week' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Week</button>
-                                <button onClick={() => setChartTimeframe('month')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'month' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Month</button>
-                                <button onClick={() => setChartTimeframe('year')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'year' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Year</button>
+                    <div className="w-full bg-white p-4 sm:p-6 rounded-3xl shadow-lg border border-gray-100">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-5">
+                            <h3 className="text-xl font-bold text-slate-800">Your Mood Overview</h3>
+                            {/* Timeframe Selector */}
+                            <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl shadow-inner">
+                                <button onClick={() => setChartTimeframe('day')} className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-all ${chartTimeframe === 'day' ? 'bg-white shadow-md text-sky-600' : 'text-slate-600 hover:bg-gray-200'}`}>Day</button>
+                                <button onClick={() => setChartTimeframe('week')} className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-all ${chartTimeframe === 'week' ? 'bg-white shadow-md text-sky-600' : 'text-slate-600 hover:bg-gray-200'}`}>Week</button>
+                                <button onClick={() => setChartTimeframe('month')} className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-all ${chartTimeframe === 'month' ? 'bg-white shadow-md text-sky-600' : 'text-slate-600 hover:bg-gray-200'}`}>Month</button>
+                                <button onClick={() => setChartTimeframe('year')} className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-all ${chartTimeframe === 'year' ? 'bg-white shadow-md text-sky-600' : 'text-slate-600 hover:bg-gray-200'}`}>Year</button>
                             </div>
                         </div>
-                        <div className="h-56">
+                        <div className="h-64">
                              <Line options={chartOptions} data={getChartData()} />
                         </div>
                     </div>
