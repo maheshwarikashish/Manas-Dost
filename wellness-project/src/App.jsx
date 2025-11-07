@@ -34,6 +34,7 @@ function App() {
             const token = localStorage.getItem('token');
             if (token) {
                 try {
+                    // Path is correct: /auth
                     const res = await api.get('/auth');
                     if (res.data.role === 'admin') {
                         setIsAdmin(true);
@@ -50,12 +51,10 @@ function App() {
         loadUser();
     }, []);
     
-    // REMOVED: The useEffect hooks for 'currentPage' and user/admin state are no longer needed
-    // as localStorage is only used for the token now.
-
     // --- Authentication handlers now handle navigation ---
     const handleLogin = async (id, password) => {
         try {
+            // Path is correct: /auth/login
             const res = await api.post('/auth/login', { studentId: id, password });
             localStorage.setItem('token', res.data.token);
             const userRes = await api.get('/auth');
@@ -68,6 +67,7 @@ function App() {
 
     const handleAdminLogin = async (id, password) => {
         try {
+            // Path is correct: /auth/admin-login
             const res = await api.post('/auth/admin-login', { studentId: id, password });
             localStorage.setItem('token', res.data.token);
             setIsAdmin(true);
@@ -77,7 +77,21 @@ function App() {
         }
     };
     
-    const handleSignup = async (name, id, password) => { /* ... unchanged ... */ };
+    // FIX APPLIED HERE: Implemented the logic for handleSignup with the correct path.
+    const handleSignup = async (name, id, password) => {
+        try {
+            const body = { name, studentId: id, password };
+            
+            // Path is CORRECT: /auth/register
+            await api.post('/auth/register', body);
+            
+            // On successful registration, we don't log in, we just inform the component
+            return { success: true, message: 'Registration successful! Please log in.' }; 
+        } catch (err) {
+            // The component relies on the message property for errors
+            return { success: false, message: err.response?.data?.msg || "Registration failed." };
+        }
+    };
 
     const handleLogout = () => {
         localStorage.removeItem('token');
