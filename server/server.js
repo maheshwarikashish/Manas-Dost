@@ -18,6 +18,7 @@ const connectDB = async () => {
 
 // --- CORS Configuration (Fixes the Vercel/Render Cross-Origin Error) ---
 const allowedOrigins = [
+    'https://manas-dost-lh3p-90lfhoc3k-kashish-khatods-projects.vercel.app', 
     'https://manas-dost-lh3p.vercel.app', 
     'http://localhost:3000', 
     'http://localhost:3001',
