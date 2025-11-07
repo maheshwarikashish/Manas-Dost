@@ -29,8 +29,6 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
----
-
 // @route   GET /api/mood/history
 // @desc    Get mood history for the logged-in user
 router.get('/history', auth, async (req, res) => {
