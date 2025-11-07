@@ -1,51 +1,47 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors'); // Required for middleware
+const cors = require('cors');
 const mongoose = require('mongoose');
+
+const app = express(); // <<< Moved app initialization up
 
 // --- Database Connection ---
 const connectDB = async () => {
     try {
-        // The MONGO_URI from .env file is used here
         await mongoose.connect(process.env.MONGO_URI);
-    
         console.log(`MongoDB connected to ${mongoose.connection.name}`);
     } catch (err) {
         console.error("Database Connection Error:", err.message);
-        // Exit process with failure
         process.exit(1);
     }
 };
 
-const app = express();
-connectDB();
-
 // --- CORS Configuration (Fixes the Vercel/Render Cross-Origin Error) ---
-// Define the allowed frontend origins
 const allowedOrigins = [
-    // 1. Add your Vercel URL (CRITICAL FIX)
     'https://manas-dost-lh3p.vercel.app', 
-    // 2. Allow localhost for your development environment
     'http://localhost:3000', 
     'http://localhost:3001',
-    // Add any other specific development ports or staging domains if needed
 ];
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Check if the origin of the request is in the allowed list
+    // Allows requests with no origin (like mobile apps or postman)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // For security, block origins not in the list
       callback(new Error(`Not allowed by CORS policy: ${origin}`));
     }
   },
-  credentials: true, // Allows cookies, authorization headers to be sent
+  credentials: true,
 };
 
+// --- CORS Fix for Preflight Requests ---
+// <<< UPDATED >>> Explicitly enable CORS for all preflight OPTIONS requests.
+// This is often needed when using whitelisting.
+app.options('*', cors(corsOptions)); 
+
 // --- Middleware ---
-// Apply the custom CORS middleware with the whitelist
+// Apply the custom CORS middleware
 app.use(cors(corsOptions));
 
 // Built-in Express body-parser middleware for JSON data
@@ -73,4 +69,11 @@ app.use('/api/journal', require('./routes/journal'));
 
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// <<< UPDATED >>> Start the server ONLY after the database is connected.
+const startServer = async () => {
+    await connectDB();
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+};
+
+startServer();
