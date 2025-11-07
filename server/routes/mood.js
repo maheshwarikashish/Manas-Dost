@@ -4,50 +4,42 @@ const { auth } = require('../middleware/auth');
 const MoodEntry = require('../models/MoodEntry');
 
 // @route   POST /api/mood
-// @desc    Log a new mood entry for the day (Upsert: creates new or updates existing)
+// @desc    Log a new mood entry with a specific timestamp (multiple per day allowed)
 router.post('/', auth, async (req, res) => {
     const { mood } = req.body; // Expecting a mood value from 1-5
-    
-    // --- FIX: Ensure consistent date object for upsert ---
-    // Use the start of the day (UTC midnight) for consistency across timezones
-    const today = new Date(); 
-    today.setUTCHours(0, 0, 0, 0); // Set to midnight UTC
-    
+
     try {
-        // Find and update today's entry (linked to the authenticated user ID)
-        let moodEntry = await MoodEntry.findOneAndUpdate(
-            // CRITICAL: Scope query by user AND the start-of-day date
-            { user: req.user.id, date: today }, 
-            { mood: mood }, // Update with the new mood value
-            { new: true, upsert: true, setDefaultsOnInsert: true }
-        );
+        // 1. **CRITICAL CHANGE:** ALWAYS create a new entry with the full timestamp (Date.now is default)
+        const newMoodEntry = new MoodEntry({
+            user: req.user.id,
+            mood: mood,
+            // The 'date' field will automatically use Date.now() from the schema
+        });
+
+        await newMoodEntry.save();
         
-        res.json(moodEntry);
+        // Return the saved entry
+        res.status(201).json(newMoodEntry);
     } catch (err) {
-        console.error("Mood POST Error:", err.message);
+        console.error("Mood POST Error (Hourly):", err.message);
         res.status(500).send('Server Error');
     }
 });
 
 // @route   GET /api/mood/history
-// @desc    Get mood history for the logged-in user
+// @desc    Get mood history for the logged-in user (now returns full timestamp)
 router.get('/history', auth, async (req, res) => {
     try {
-        // CRITICAL: Filter by the authenticated user ID
+        // Fetch ALL entries for the user, including the full date/time
         const history = await MoodEntry.find({ user: req.user.id })
-            .select('mood date') // Only return the necessary fields for the chart
-            .sort({ date: -1 }); // Sort by newest date first
+            .select('mood date') 
+            .sort({ date: -1 }); 
             
-        // OPTIONAL: Format date to string "YYYY-MM-DD" to exactly match the frontend's expectation/lookup format
-        const formattedHistory = history.map(entry => ({
-             mood: entry.mood,
-             // The date is a Date object (UTC midnight), format it to a string for frontend consistency
-             date: entry.date.toISOString().split('T')[0] 
-        }));
-
-        res.json(formattedHistory);
+        // Return the raw entries with full ISO timestamps.
+        // Frontend will handle filtering and formatting for the chart.
+        res.json(history); 
     } catch (err) {
-        console.error("Mood History GET Error:", err.message);
+        console.error("Mood History GET Error (Hourly):", err.message);
         res.status(500).send('Server Error');
     }
 });
