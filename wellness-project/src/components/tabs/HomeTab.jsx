@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import api from '../../services/api'; 
 
-// 💡 NECESSARY CHART.JS IMPORTS AND REGISTRATION
-// These imports are required for the Line chart and the 'fill' option to work.
+// 💡 NECESSARY CHART.JS IMPORTS AND REGISTRATION (Kept to prevent the 'fill' error)
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -13,7 +13,7 @@ import {
     Title,
     Tooltip,
     Legend,
-    Filler, // CRITICAL: For the fill: true option
+    Filler, 
 } from 'chart.js';
 
 ChartJS.register(
@@ -24,25 +24,32 @@ ChartJS.register(
     Title,
     Tooltip,
     Legend,
-    Filler // CRITICAL: Register the Filler plugin
+    Filler 
 );
 
 const HomeTab = ({ user, navigateToTab }) => {
     const [selectedMood, setSelectedMood] = useState(null);
     const [moodHistory, setMoodHistory] = useState([]);
-    const [chartTimeframe, setChartTimeframe] = useState('week');
+    // MODIFIED: Default to 'day' or 'week' (kept 'week' to minimize changes)
+    const [chartTimeframe, setChartTimeframe] = useState('week'); 
     const [showMoodOverview, setShowMoodOverview] = useState(false);
 
     const moodMap = { '😞': 1, '😕': 2, '😐': 3, '🙂': 4, '😊': 5 };
     const emojiMap = ['?', '😞', '😕', '😐', '🙂', '😊'];
 
-    // 1. ⚙️ MODIFIED: Fetch real mood history with full timestamps
+    // 1. ⚙️ CLEANED: Fetches mood history. Expects data formatted for day-wise aggregation.
+    // NOTE: This assumes your backend has been reverted to return day-wise data for month/year views.
     useEffect(() => {
         const fetchMoodHistory = async () => {
             try {
                 const res = await api.get('/mood/history');
-                // CRITICAL: Store the data as received (objects with full ISO 'date' string and 'mood')
-                setMoodHistory(res.data);
+                // Data mapping is back to what it was: "YYYY-MM-DD" string date
+                const formattedHistory = res.data.map(entry => ({
+                    // We assume the backend now returns the full date string with time for better handling
+                    date: entry.date, 
+                    mood: entry.mood
+                }));
+                setMoodHistory(formattedHistory);
             } catch (err) {
                 console.error("Failed to fetch mood history", err);
             }
@@ -50,23 +57,30 @@ const HomeTab = ({ user, navigateToTab }) => {
         fetchMoodHistory();
     }, []);
 
-    // 2. ➕ MODIFIED: Handle saving a new mood (creates a new entry with full timestamp)
+    // 2. ➕ CLEANED: Handle saving a new mood. Sends the mood, then fetches fresh data.
     const handleMoodSelect = async (moodEmoji) => {
         const moodValue = moodMap[moodEmoji];
         setSelectedMood(moodEmoji);
         
+        // Optimistic UI update (optional, but good for responsiveness)
+        // NOTE: This logic assumes the POST route handles the date stamping correctly
         try {
-            const res = await api.post('/mood', { mood: moodValue });
+            await api.post('/mood', { mood: moodValue });
             
-            // Update the UI by prepending the newly saved entry (with its new timestamp)
-            const newEntry = res.data; 
-            setMoodHistory(prevHistory => [newEntry, ...prevHistory]);
+            // Re-fetch history to get the latest entry, ensuring accuracy
+            const res = await api.get('/mood/history');
+            const formattedHistory = res.data.map(entry => ({
+                date: entry.date, 
+                mood: entry.mood
+            }));
+            setMoodHistory(formattedHistory);
 
         } catch (err) {
             console.error("Failed to save mood", err);
         }
     };
-
+    
+    // ... (getGreeting remains unchanged)
     const getGreeting = () => {
         const hour = new Date().getHours();
         if (hour < 12) return "Good morning";
@@ -74,105 +88,118 @@ const HomeTab = ({ user, navigateToTab }) => {
         return "Good evening";
     };
 
-    // 3. 📊 MODIFIED: Reworked getChartData for hourly (week) and daily/monthly averages
+    // Helper function to get the YYYY-MM-DD key from a Date object or ISO string
+    const getDateKey = (dateInput) => {
+        const date = new Date(dateInput);
+        return date.toISOString().split('T')[0];
+    };
+
+    // 3. 📊 MODIFIED: getChartData now includes 'day' option
     const getChartData = () => {
         const now = new Date();
         let labels = [];
         let dataPoints = [];
         
-        // Convert date strings to Date objects for easier manipulation
-        const filteredHistory = moodHistory.map(entry => ({ 
-            ...entry, 
-            date: new Date(entry.date) 
-        }));
+        // Prepare data: { "YYYY-MM-DD": [ {mood: 4, date: Date object}, ... ], ... }
+        // This groups all entries (including multiple per day) for flexible use
+        const groupedByDay = moodHistory.reduce((acc, entry) => {
+            const dateKey = getDateKey(entry.date);
+            if (!acc[dateKey]) acc[dateKey] = [];
+            acc[dateKey].push({ mood: entry.mood, date: new Date(entry.date) });
+            return acc;
+        }, {});
 
-        if (chartTimeframe === 'week') {
-            // Display mood changes over the last 7 days, with hourly precision
-            const MS_PER_DAY = 24 * 60 * 60 * 1000;
-            const sevenDaysAgo = now.getTime() - (7 * MS_PER_DAY);
+        // --- NEW: 'day' timeframe logic (Hourly plot for today) ---
+        if (chartTimeframe === 'day') {
+            const todayKey = getDateKey(now);
+            const todayEntries = groupedByDay[todayKey] || [];
             
-            // Filter data to only the last 7 days
-            const weekData = filteredHistory.filter(entry => entry.date.getTime() >= sevenDaysAgo);
+            // Sort entries chronologically for time series chart
+            todayEntries.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-            // Sort by time, oldest first
-            weekData.sort((a, b) => a.date.getTime() - b.date.getTime());
-
-            // Labels will be the date and time of the entry (for hourly view)
-            labels = weekData.map(entry => 
-                entry.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + 
-                ' ' + 
-                entry.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+            labels = todayEntries.map(entry => 
+                entry.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
             );
+            dataPoints = todayEntries.map(entry => entry.mood);
 
-            dataPoints = weekData.map(entry => entry.mood);
-            
-            // Handle no data case
+            // If no data for today, show 24 hours as labels
             if (dataPoints.length === 0) {
-                 labels = ['No recent data'];
-                 dataPoints = [null];
+                 labels = Array.from({ length: 24 }).map((_, i) => `${String(i).padStart(2, '0')}:00`);
+                 dataPoints = Array(24).fill(null);
             }
 
-        } else if (chartTimeframe === 'month' || chartTimeframe === 'year') {
-            // For Month and Year, we return to plotting AVERAGES per day/month
+        // --- Original 'week' logic (Averages or latest mood per day) ---
+        } else if (chartTimeframe === 'week') {
+            let startDate = new Date();
+            startDate.setDate(now.getDate() - 6);
             
-            let timeUnit;
-            if (chartTimeframe === 'month') {
-                timeUnit = 'day';
-            } else { // year
-                timeUnit = 'month';
+            // Generate labels and data points for the last 7 days
+            for (let i = 0; i < 7; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                const dateKey = getDateKey(currentDate);
+
+                labels.push(currentDate.toLocaleDateString('en-US', { weekday: 'short' }));
+                
+                const entries = groupedByDay[dateKey];
+                if (entries && entries.length > 0) {
+                    // Calculate daily average mood (best practice for aggregated views)
+                    const avgMood = entries.reduce((sum, entry) => sum + entry.mood, 0) / entries.length;
+                    dataPoints.push(avgMood);
+                } else {
+                    dataPoints.push(null);
+                }
             }
 
-            // Group data by the relevant time unit (day or month)
-            const groupedData = filteredHistory.reduce((acc, entry) => {
-                let key;
-                if (timeUnit === 'day') {
-                    key = entry.date.toISOString().split('T')[0]; // YYYY-MM-DD
-                } else { // month
-                    key = `${entry.date.getFullYear()}-${entry.date.getMonth()}`; // YYYY-MonthIndex
-                }
+        // --- Original 'month' logic (Daily averages) ---
+        } else if (chartTimeframe === 'month') {
+            let startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            
+            for (let i = 0; i < daysInMonth; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                const dateKey = getDateKey(currentDate);
                 
-                if (!acc[key]) acc[key] = { total: 0, count: 0, date: entry.date };
-                acc[key].total += entry.mood;
-                acc[key].count++;
-                return acc;
-            }, {});
-
-            // Prepare the final chart data based on the timeframe range
-            if (chartTimeframe === 'month') {
-                let startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                labels.push(i + 1); 
                 
-                for (let i = 0; i < daysInMonth; i++) {
-                    const currentDate = new Date(startDate);
-                    currentDate.setDate(startDate.getDate() + i);
-                    
-                    const dateKey = currentDate.toISOString().split('T')[0];
-                    const data = groupedData[dateKey];
-
-                    labels.push(currentDate.getDate()); // Day number
-                    dataPoints.push(data ? data.total / data.count : null);
-                }
-            } else { // year
-                const yearLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                for (let i = 0; i < 12; i++) {
-                    const monthKey = `${now.getFullYear()}-${i}`;
-                    const data = groupedData[monthKey];
-
-                    labels.push(yearLabels[i]);
-                    dataPoints.push(data ? data.total / data.count : null);
+                const entries = groupedByDay[dateKey];
+                if (entries && entries.length > 0) {
+                    const avgMood = entries.reduce((sum, entry) => sum + entry.mood, 0) / entries.length;
+                    dataPoints.push(avgMood);
+                } else {
+                    dataPoints.push(null);
                 }
             }
+
+        // --- Original 'year' logic (Monthly averages) ---
+        } else if (chartTimeframe === 'year') {
+            labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const yearData = Array(12).fill(0); 
+            const counts = Array(12).fill(0);
+            
+            // Calculate the total mood and count per month
+            Object.values(groupedByDay).flat().forEach(entry => {
+                const entryDate = entry.date;
+                if (entryDate.getFullYear() === now.getFullYear()) {
+                    const monthIndex = entryDate.getMonth();
+                    yearData[monthIndex] += entryDate.mood; 
+                    counts[monthIndex]++;
+                }
+            }); 
+            
+            dataPoints = yearData.map((total, i) => counts[i] > 0 ? (total / counts[i]) : null);
         }
 
         return {
             labels, datasets: [{
-                label: chartTimeframe === 'week' ? 'Mood Level' : 'Average Mood Level', 
+                label: chartTimeframe === 'day' ? 'Mood Entry' : 'Average Mood', 
                 data: dataPoints, 
                 borderColor: '#0ea5e9',
                 backgroundColor: 'rgba(14, 165, 233, 0.1)', 
-                fill: true, // This now works due to the Filler plugin registration
-                tension: 0.2, 
-                spanGaps: false,
+                fill: true, 
+                tension: 0.4, 
+                spanGaps: true,
             }],
         };
     };
@@ -193,11 +220,11 @@ const HomeTab = ({ user, navigateToTab }) => {
                 } 
             },
             x: {
-                // Adjust x-axis ticks for better display of time/dates
+                // Adjust x-axis ticks for better display of hourly data
                 ticks: {
-                    autoSkip: chartTimeframe === 'week', // Auto-skip if it's the busy week view
-                    maxRotation: chartTimeframe === 'week' ? 90 : 0, // Rotate labels for hourly view
-                    minRotation: chartTimeframe === 'week' ? 90 : 0,
+                    autoSkip: chartTimeframe === 'day', 
+                    maxRotation: chartTimeframe === 'day' ? 90 : 0, 
+                    minRotation: chartTimeframe === 'day' ? 90 : 0,
                 }
             }
         } 
@@ -267,7 +294,9 @@ const HomeTab = ({ user, navigateToTab }) => {
                     <div className="w-full bg-white p-4 sm:p-6 rounded-2xl shadow-lg animate-fade-in">
                         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
                             <h3 className="text-lg font-bold text-slate-700">Your Mood Overview</h3>
+                            {/* MODIFIED: Added 'Day' button */}
                             <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg">
+                                <button onClick={() => setChartTimeframe('day')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'day' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Day</button>
                                 <button onClick={() => setChartTimeframe('week')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'week' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Week</button>
                                 <button onClick={() => setChartTimeframe('month')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'month' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Month</button>
                                 <button onClick={() => setChartTimeframe('year')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'year' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Year</button>
