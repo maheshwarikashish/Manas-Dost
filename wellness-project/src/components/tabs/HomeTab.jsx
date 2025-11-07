@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import api from '../../services/api'; 
 
-// 💡 NECESSARY CHART.JS IMPORTS AND REGISTRATION
+// 💡 NECESSARY CHART.JS IMPORTS AND REGISTRATION (Kept to prevent the 'fill' error)
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -29,8 +29,9 @@ ChartJS.register(
 const HomeTab = ({ user, navigateToTab }) => {
     const [selectedMood, setSelectedMood] = useState(null);
     const [moodHistory, setMoodHistory] = useState([]);
-    const [chartTimeframe, setChartTimeframe] = useState('day'); // Default to 'day' view
-    const [showMoodOverview, setShowMoodOverview] = useState(true); // Default to showing overview
+    // Keeping 'week' as the initial default, per your original request's context
+    const [chartTimeframe, setChartTimeframe] = useState('week'); 
+    const [showMoodOverview, setShowMoodOverview] = useState(false);
 
     const moodMap = { '😞': 1, '😕': 2, '😐': 3, '🙂': 4, '😊': 5 };
     const emojiMap = ['?', '😞', '😕', '😐', '🙂', '😊'];
@@ -68,9 +69,6 @@ const HomeTab = ({ user, navigateToTab }) => {
                 mood: entry.mood
             }));
             setMoodHistory(formattedHistory);
-            
-            // Show the overview immediately after logging mood
-            setShowMoodOverview(true); 
 
         } catch (err) {
             console.error("Failed to save mood", err);
@@ -114,9 +112,8 @@ const HomeTab = ({ user, navigateToTab }) => {
             todayEntries.sort((a, b) => a.date.getTime() - b.date.getTime());
 
             labels = todayEntries.map(entry => 
-                // CRITICAL FIX: Use 'en-IN' or similar locale if needed, but toLocaleTimeString() 
-                // relies on the correct time being in the Date object, which is now verified.
-                entry.date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) 
+                // CRITICAL FIX: Using 'en-IN' to ensure correct time display (e.g., 2:30 PM)
+                entry.date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) 
             );
             dataPoints = todayEntries.map(entry => entry.mood);
 
@@ -193,7 +190,7 @@ const HomeTab = ({ user, navigateToTab }) => {
                 borderColor: '#0ea5e9',
                 backgroundColor: 'rgba(14, 165, 233, 0.1)', 
                 fill: true, 
-                tension: chartTimeframe === 'day' ? 0.2 : 0.4, // Smoother line for time data
+                tension: 0.4, 
                 spanGaps: true,
             }],
         };
@@ -203,7 +200,7 @@ const HomeTab = ({ user, navigateToTab }) => {
         responsive: true, 
         plugins: { 
             legend: { display: false },
-            tooltip: {
+             tooltip: {
                 // Adjust tooltip to show the emoji label
                 callbacks: {
                     label: function(context) {
@@ -216,9 +213,6 @@ const HomeTab = ({ user, navigateToTab }) => {
             y: { 
                 min: 1, 
                 max: 5, 
-                grid: {
-                    color: 'rgba(0, 0, 0, 0.05)',
-                },
                 ticks: { 
                     padding: 10, 
                     font: { size: 14 }, 
@@ -226,15 +220,11 @@ const HomeTab = ({ user, navigateToTab }) => {
                 } 
             },
             x: {
-                grid: {
-                    display: false, // Cleaner X-axis grid
-                },
                 // Adjust x-axis ticks for better display of hourly data
                 ticks: {
-                    autoSkip: chartTimeframe !== 'day', // Only auto-skip for week/month/year
-                    maxRotation: chartTimeframe === 'day' ? 45 : 0, 
-                    minRotation: chartTimeframe === 'day' ? 45 : 0,
-                    font: { size: 11 }
+                    autoSkip: chartTimeframe === 'day', 
+                    maxRotation: chartTimeframe === 'day' ? 90 : 0, 
+                    minRotation: chartTimeframe === 'day' ? 90 : 0,
                 }
             }
         } 
@@ -252,13 +242,13 @@ const HomeTab = ({ user, navigateToTab }) => {
             default: return null;
         }
         return (
-            <div className="w-full animate-fade-in text-center p-4">
+            <div className="w-full animate-fade-in text-center">
                 <hr className="my-6 border-slate-200" />
-                <h4 className="text-xl font-semibold text-slate-800 mb-2">{content.title}</h4>
-                <p className="text-base text-slate-600 max-w-sm mx-auto">{content.desc}</p>
-                <div className="mt-4 flex justify-center">
+                <h4 className="text-xl font-bold text-slate-700 mb-1">{content.title}</h4>
+                <p className="text-base text-slate-600 my-2 max-w-sm mx-auto">{content.desc}</p>
+                <div className="mt-4">
                     {content.actions.map(action => (
-                        <button key={action.tab} onClick={() => navigateToTab(action.tab)} className={`text-white font-medium px-4 py-2 rounded-xl text-sm transition shadow-md ${action.color}`}>
+                        <button key={action.tab} onClick={() => navigateToTab(action.tab)} className={`text-white font-semibold px-5 py-2.5 rounded-lg text-base transition ${action.color}`}>
                             {action.label}
                         </button>
                     ))}
@@ -268,50 +258,51 @@ const HomeTab = ({ user, navigateToTab }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="w-full max-w-3xl mx-auto px-4 space-y-6">
-                
-                {/* 1. Header and Mood Selection */}
-                <div className="bg-white p-6 rounded-3xl shadow-lg text-center">
-                    <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">
-                        {getGreeting()}, <span className="text-sky-600">{user?.name?.split(' ')[0]}</span>
+        <div className="py-6">
+            <div className="w-full max-w-3xl mx-auto px-4 space-y-8">
+                <div className="text-center">
+                    <h2 className="text-3xl font-bold text-slate-700 tracking-tight">
+                        {getGreeting()}, <span className="text-sky-500">{user?.name?.split(' ')[0]}</span>
                     </h2>
-                    <p className="text-base text-slate-500 mt-2 mb-6">Log your mood for insight.</p>
-                    
-                    {/* Mood Emojis */}
-                    <div className="flex justify-center items-center space-x-3 md:space-x-5">
+                    <p className="text-base text-slate-500 mt-2 mb-4">How are you feeling today?</p>
+                    <div className="flex justify-center items-center space-x-2 md:space-x-3">
                         {Object.keys(moodMap).map(emoji => (
                             <button
                                 key={emoji}
                                 onClick={() => handleMoodSelect(emoji)}
-                                className={`text-5xl p-3 rounded-full transition-all duration-300 transform 
-                                    ${selectedMood === emoji 
-                                        ? 'ring-4 ring-sky-300 bg-sky-50 shadow-xl scale-110' 
-                                        : 'hover:bg-slate-100 hover:scale-105'}`}
+                                className={`text-4xl p-2 rounded-full transition-all duration-200 transform ${selectedMood === emoji ? 'bg-sky-100 scale-110' : 'hover:bg-slate-100 hover:scale-105'}`}
                             >
                                 {emoji}
                             </button>
                         ))}
                     </div>
-                    
-                    {/* For You Section */}
                     <ForYouSection />
                 </div>
-
-                {/* 2. Mood Overview Chart */}
+                {!showMoodOverview && (
+                    <div className="bg-slate-100 p-5 rounded-2xl text-center animate-fade-in">
+                         <h3 className="text-lg font-bold text-slate-700">Track Your Wellness Journey</h3>
+                         <p className="text-slate-500 mt-1 mb-4 text-xs">Visualize your mood patterns to gain valuable insights.</p>
+                         <button 
+                            onClick={() => setShowMoodOverview(true)} 
+                            className="bg-sky-500 text-white font-bold py-2 px-5 rounded-lg hover:bg-sky-600 transition text-sm"
+                        >
+                           View My Mood Overview
+                        </button>
+                    </div>
+                )}
                 {showMoodOverview && (
-                    <div className="w-full bg-white p-4 sm:p-6 rounded-3xl shadow-lg border border-gray-100">
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-5">
-                            <h3 className="text-xl font-bold text-slate-800">Your Mood Overview</h3>
+                    <div className="w-full bg-white p-4 sm:p-6 rounded-2xl shadow-lg animate-fade-in">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
+                            <h3 className="text-lg font-bold text-slate-700">Your Mood Overview</h3>
                             {/* Timeframe Selector */}
-                            <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl shadow-inner">
-                                <button onClick={() => setChartTimeframe('day')} className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-all ${chartTimeframe === 'day' ? 'bg-white shadow-md text-sky-600' : 'text-slate-600 hover:bg-gray-200'}`}>Day</button>
-                                <button onClick={() => setChartTimeframe('week')} className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-all ${chartTimeframe === 'week' ? 'bg-white shadow-md text-sky-600' : 'text-slate-600 hover:bg-gray-200'}`}>Week</button>
-                                <button onClick={() => setChartTimeframe('month')} className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-all ${chartTimeframe === 'month' ? 'bg-white shadow-md text-sky-600' : 'text-slate-600 hover:bg-gray-200'}`}>Month</button>
-                                <button onClick={() => setChartTimeframe('year')} className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-all ${chartTimeframe === 'year' ? 'bg-white shadow-md text-sky-600' : 'text-slate-600 hover:bg-gray-200'}`}>Year</button>
+                            <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg">
+                                <button onClick={() => setChartTimeframe('day')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'day' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Day</button>
+                                <button onClick={() => setChartTimeframe('week')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'week' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Week</button>
+                                <button onClick={() => setChartTimeframe('month')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'month' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Month</button>
+                                <button onClick={() => setChartTimeframe('year')} className={`px-3 py-1 text-sm font-semibold rounded-md transition ${chartTimeframe === 'year' ? 'bg-white shadow text-sky-600' : 'text-slate-500'}`}>Year</button>
                             </div>
                         </div>
-                        <div className="h-64">
+                        <div className="h-56">
                              <Line options={chartOptions} data={getChartData()} />
                         </div>
                     </div>
