@@ -181,7 +181,7 @@ const ToolsTab = () => {
             </h3>
             <p className="mt-3 text-lg text-gray-600 max-w-2xl">Your personal assistants for goal setting and self-reflection.</p>
 
-            <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="mt-10 grid grid-cols-1 gap-8">
 
                 {/* --- AI Goal Setter Card --- */}
                 <div className="bg-white p-6 rounded-2xl shadow-xl border border-[#00A896]">
