@@ -10,7 +10,7 @@ const predefinedJourneys = {
   anxiety: {
     id: 'anxiety',
     title: '7-Day Challenge to Reduce Anxiety',
-    description: 'A 7-day plan with calming exercises and mindfulness techniques.',
+    description: 'Complete one small task each day to build healthy habits.',
     tasks: [
       { task: "Practice 2 minutes of mindful breathing." },
       { task: "Write down three things you're grateful for." },
@@ -24,7 +24,7 @@ const predefinedJourneys = {
   diet: {
     id: 'diet',
     title: '7-Day Healthy Diet Challenge',
-    description: 'A 7-day challenge to build better eating habits for your mind and body.',
+    description: 'Fuel your body and mind with nutritious choices.',
     tasks: [
       { task: "Drink 8 glasses of water today." },
       { task: "Eat a piece of fruit with your breakfast." },
