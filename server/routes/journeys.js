@@ -4,7 +4,7 @@ const { auth } = require('../middleware/auth');
 const GeminiService = require('../services/geminiService');
 const { callGeminiAPI } = GeminiService;
 
-// In-memory data store for this example. Replace with a database in a real application.
+// In-memory data store. In a real application, this would be a database.
 const userJourneyProgress = {}; 
 
 const predefinedJourneys = {
@@ -78,54 +78,58 @@ router.post('/custom', auth, async (req, res) => {
         return res.status(400).json({ msg: 'Goal is required' });
     }
 
+    let aiResponseText = ''; // For logging in case of an error
+
     try {
         const prompt = `
-            Act as an encouraging wellness coach for a college student. The student's goal is: "${goal}".
-            Create a structured 7-day wellness plan. Your response MUST be formatted as a JSON object with "title", "description", and "tasks" properties. 
-            The "tasks" property should be an array of 7 strings.
-            Example:
-            {
-              "title": "My Awesome 7-Day Goal",
-              "description": "A plan to achieve my goal.",
-              "tasks": [
-                "Day 1: Do the first thing.",
-                "Day 2: Do the second thing.",
-                "Day 3: Do the third thing.",
-                "Day 4: Do the fourth thing.",
-                "Day 5: Do the fifth thing.",
-                "Day 6: Do the sixth thing.",
-                "Day 7: Do the seventh thing."
-              ]
-            }
+            Act as an encouraging wellness coach. The user's goal is: "${goal}".
+            Create a structured 7-day wellness plan. 
+            Your response MUST be a single, valid JSON object.
+            The JSON object should have "title", "description", and "tasks" properties. 
+            The "tasks" property must be an array of 7 distinct, actionable strings for each day.
+            Do NOT include any markdown formatting, comments, or any other text outside of the JSON object.
         `;
         
-        let aiResponseText = await callGeminiAPI(prompt);
-        
-        // Sanitize the response: remove markdown backticks and trim
-        aiResponseText = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        aiResponseText = await callGeminiAPI(prompt);
 
-        const aiResponse = JSON.parse(aiResponseText);
+        // --- DEFINITIVE, ROBUST JSON EXTRACTION AND CLEANING ---
+        let jsonString = ''
+        const jsonMatch = aiResponseText.match(/\{([\s\S]*)\}/);
+        if (!jsonMatch) {
+            throw new Error("AI response did not contain a JSON object.");
+        }
+        jsonString = `{${jsonMatch[1]}}`;
 
-        if (!aiResponse.title || !aiResponse.description || !Array.isArray(aiResponse.tasks) || aiResponse.tasks.length < 7) {
-            throw new Error("AI returned an invalid format.");
+        // Clean the JSON string of common mistakes, like trailing commas
+        jsonString = jsonString.replace(/,(\s*[\}\]])/g, '$1');
+        // --- END OF FIX ---
+
+        const aiResponse = JSON.parse(jsonString);
+
+        if (!aiResponse.title || !aiResponse.description || !Array.isArray(aiResponse.tasks) || aiResponse.tasks.length === 0) {
+            throw new Error("AI returned an invalid format: missing title, description, or tasks.");
         }
 
         const newJourney = {
             id: `custom-${Date.now()}`,
             title: aiResponse.title,
             description: aiResponse.description,
-            tasks: aiResponse.tasks.map(task => ({ task: task.replace(/Day \d: /, '').trim(), completed: false }))
+            tasks: aiResponse.tasks.map(task => ({
+                task: String(task).replace(/^Day \d+: /i, '').trim(),
+                completed: false
+            }))
         };
 
-        res.json(newJourney);
+        res.status(201).json(newJourney);
 
     } catch (err) {
-        console.error("Error generating custom journey:", err);
-        // More specific error logging
-        if (err instanceof SyntaxError) {
-            console.error("Failed to parse AI response as JSON.");
-        }
-        res.status(500).send('Error generating custom plan from AI. The AI may have returned an unexpected format.');
+        console.error("\n--- ERROR: Failed to generate custom journey ---");
+        console.error("User Goal:", goal);
+        console.error("Original AI Response Text:", aiResponseText);
+        console.error("Error Details:", err.message);
+        console.error("--------------------------------------------------\n");
+        
+        res.status(500).send('Error generating custom plan from AI. The AI returned an unexpected format. Please try again.');
     }
 });
 
@@ -134,9 +138,9 @@ router.post('/custom', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
     const userId = req.user.id;
     const journeyId = req.params.id;
-    const { tasks } = req.body; // Expecting an array of task objects with a 'completed' property
+    const { tasks } = req.body;
 
-    if (!tasks) {
+    if (!tasks || !Array.isArray(tasks)) {
         return res.status(400).json({ msg: 'Tasks array is required' });
     }
 
@@ -144,12 +148,12 @@ router.put('/:id', auth, async (req, res) => {
         if (!userJourneyProgress[userId]) {
             userJourneyProgress[userId] = {};
         }
-        // We only need to store the completion status
-        const completedStatus = tasks.map(t => t.completed);
+
+        const completedStatus = tasks.map(t => !!t.completed);
         userJourneyProgress[userId][journeyId] = completedStatus;
 
-        console.log(`Journey progress for user ${userId} on journey ${journeyId} updated:`, completedStatus);
-        res.json({ msg: 'Progress saved' });
+        console.log(`Progress for user ${userId} on journey ${journeyId} updated.`);
+        res.status(200).json({ msg: 'Progress saved' });
 
     } catch (err) {
         console.error("Error saving journey progress:", err);
