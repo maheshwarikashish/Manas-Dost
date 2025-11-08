@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
-// --- [DEFINITIVE FIX] --- 
-// Correctly import from CommonJS module. No '.default' is needed.
-const { callGeminiAPI } = require('../services/geminiService');
+// --- [DEFINITIVE IMPORT FIX] --- 
+// Correcting the import to match the fix in journeys.js and chat.js
+const geminiService = require('../services/geminiService');
+const callGeminiAPI = geminiService.default.callGeminiAPI;
 const User = require('../models/User');
 const JournalEntry = require('../models/JournalEntry');
 
