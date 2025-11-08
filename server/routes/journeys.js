@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
-const { callGeminiAPI } = require('../services/geminiService');
+const geminiService = require('../services/geminiService');
+const callGeminiAPI = geminiService.default.callGeminiAPI;
 
-// In-memory data store. In a real application, this would be a database.
 const userJourneyProgress = {}; 
 
 const predefinedJourneys = {
@@ -51,7 +51,6 @@ const predefinedJourneys = {
   }
 };
 
-// GET all predefined journeys and user's progress
 router.get('/', auth, (req, res) => {
     const userId = req.user.id;
     const journeysWithProgress = {};
@@ -70,14 +69,13 @@ router.get('/', auth, (req, res) => {
     res.json(journeysWithProgress);
 });
 
-// POST a new custom journey
 router.post('/custom', auth, async (req, res) => {
     const { goal } = req.body;
     if (!goal) {
         return res.status(400).json({ msg: 'Goal is required' });
     }
 
-    let aiResponseText = ''; // For logging
+    let aiResponseText = '';
 
     try {
         const prompt = `
@@ -85,15 +83,6 @@ router.post('/custom', auth, async (req, res) => {
             Create a 7-day wellness plan with 7 simple, actionable tasks.
             List the 7 tasks clearly, one per line. Each line MUST start with "Day X: ".
             Do not include a title, description, or any other text. Just the 7 task lines.
-
-            Example Response Format:
-            Day 1: First task.
-            Day 2: Second task.
-            Day 3: Third task.
-            Day 4: Fourth task.
-            Day 5: Fifth task.
-            Day 6: Sixth task.
-            Day 7: Seventh task.
         `;
         
         aiResponseText = await callGeminiAPI(prompt);
@@ -120,19 +109,15 @@ router.post('/custom', auth, async (req, res) => {
         res.status(201).json(newJourney);
 
     } catch (err) {
-        console.error("\n--- ERROR: Failed to generate custom journey ---");
+        console.error("--- CUSTOM JOURNEY ERROR ---");
         console.error("User Goal:", goal);
-        // --- [DEFINITIVE FIX] --- 
-        // Removed the stray double-quote that caused a fatal SyntaxError.
-        console.error("Original AI Response Text:\n---\n", aiResponseText, "\n---");
+        console.error("Raw AI Response:", aiResponseText);
         console.error("Error Details:", err.message);
-        console.error("--------------------------------------------------\n");
-        
-        res.status(500).send('Error generating custom plan from AI. The AI failed to provide a valid plan. Please try again.');
+        console.error("-----------------------------");
+        res.status(500).send('Error generating custom plan from AI.');
     }
 });
 
-// PUT to update journey progress
 router.put('/:id', auth, async (req, res) => {
     const userId = req.user.id;
     const journeyId = req.params.id;
@@ -142,21 +127,12 @@ router.put('/:id', auth, async (req, res) => {
         return res.status(400).json({ msg: 'Tasks array is required' });
     }
 
-    try {
-        if (!userJourneyProgress[userId]) {
-            userJourneyProgress[userId] = {};
-        }
-
-        const completedStatus = tasks.map(t => !!t.completed);
-        userJourneyProgress[userId][journeyId] = completedStatus;
-
-        console.log(`Progress for user ${userId} on journey ${journeyId} updated.`);
-        res.status(200).json({ msg: 'Progress saved' });
-
-    } catch (err) {
-        console.error("Error saving journey progress:", err);
-        res.status(500).send('Server Error');
+    if (!userJourneyProgress[userId]) {
+        userJourneyProgress[userId] = {};
     }
+
+    userJourneyProgress[userId][journeyId] = tasks.map(t => !!t.completed);
+    res.status(200).json({ msg: 'Progress saved' });
 });
 
 module.exports = router;
