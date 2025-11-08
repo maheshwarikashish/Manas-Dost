@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
-// --- [DEFINITIVE FIX] ---
-// Correctly import from the CommonJS module, matching the other route files.
 const { callGeminiAPI } = require('../services/geminiService');
 
 // In-memory data store. In a real application, this would be a database.
@@ -124,7 +122,9 @@ router.post('/custom', auth, async (req, res) => {
     } catch (err) {
         console.error("\n--- ERROR: Failed to generate custom journey ---");
         console.error("User Goal:", goal);
-        console.error("Original AI Response Text:\n---\n", aiResponseText, "\n---\" );
+        // --- [DEFINITIVE FIX] --- 
+        // Removed the stray double-quote that caused a fatal SyntaxError.
+        console.error("Original AI Response Text:\n---\n", aiResponseText, "\n---");
         console.error("Error Details:", err.message);
         console.error("--------------------------------------------------\n");
         
