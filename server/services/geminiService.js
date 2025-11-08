@@ -18,7 +18,7 @@ const callGeminiAPI = async (prompt, systemInstruction = '') => {
         // --- [DEFINITIVE FIX] --- 
         // Get the generative model using the correct model name as requested.
         const model = genAI.getGenerativeModel({ 
-            model: 'gemini-2.5-pro', 
+            model: 'gemini-2.5-flash', 
         });
 
         const result = await model.generateContent([
