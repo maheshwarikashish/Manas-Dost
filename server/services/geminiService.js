@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -17,19 +17,29 @@ const callGeminiAPI = async (prompt, systemInstruction = '') => {
 
         // Get the generative model
         const model = genAI.getGenerativeModel({ 
-            model: 'gemini-2.5-flash',
+            model: 'gemini-1.5-flash', // Using a reliable and fast model
             systemInstruction: systemInstruction || 'You are a helpful and supportive assistant.'
         });
 
         // Generate content
         const result = await model.generateContent(prompt);
         const response = result.response;
-        const text = response.text();
+        
+        // Ensure response is valid before getting text
+        if (!response) {
+            throw new Error('Received an empty response from the Gemini API.');
+        }
 
+        const text = response.text();
         return text;
+
     } catch (error) {
-        console.error('Gemini API Error:', error.message);
-        throw new Error(`Failed to generate content: ${error.message}`);
+        console.error('--- GEMINI API SERVICE ERROR ---');
+        console.error(`Error calling Gemini API: ${error.message}`);
+        console.error(`Prompt that caused error: ${prompt}`);
+        console.error('--------------------------------');
+        // Throw a new error to be caught by the route handler
+        throw new Error(`Failed to generate content from AI. Please check server logs for details.`);
     }
 };
 
@@ -43,7 +53,8 @@ const generateContent = async (prompt, systemInstruction = '') => {
     return callGeminiAPI(prompt, systemInstruction);
 };
 
-export default {
+// Use CommonJS export
+module.exports = {
     callGeminiAPI,
     generateContent
 };
