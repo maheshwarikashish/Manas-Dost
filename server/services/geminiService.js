@@ -1,6 +1,6 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize Gemini AI client. It is crucial to do this once and reuse the client.
+// Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 /**
@@ -15,36 +15,35 @@ const callGeminiAPI = async (prompt, systemInstruction = '') => {
             throw new Error('GEMINI_API_KEY is not set in environment variables');
         }
 
-        // --- [DEFINITIVE FIX] --- 
-        // Get the generative model using the correct model name as requested.
+        // Get the generative model
         const model = genAI.getGenerativeModel({ 
-            model: 'gemini-2.5-flash', 
+            model: 'gemini-2.5-flash',
+            systemInstruction: systemInstruction || 'You are a helpful and supportive assistant.'
         });
 
-        const result = await model.generateContent([
-            { role: "system", parts: [{ text: systemInstruction || 'You are a helpful and supportive assistant.' }] },
-            { role: "user", parts: [{ text: prompt }] },
-        ]);
-
+        // Generate content
+        const result = await model.generateContent(prompt);
         const response = result.response;
-
-        if (!response || !response.text) {
-            console.error("Invalid response structure from Gemini API:", response);
-            throw new Error('Received an invalid or empty response from the Gemini API.');
-        }
-
         const text = response.text();
-        return text;
 
+        return text;
     } catch (error) {
-        console.error('--- GEMINI API SERVICE ERROR ---');
-        console.error(`Timestamp: ${new Date().toISOString()}`);
-        // Log the full error for better debugging, not just the message.
-        console.error("Full Error Object:", error);
-        console.error('--------------------------------');
-        // Re-throw a more user-friendly error to be caught by the route handler.
-        throw new Error(`Failed to generate content from AI. The API call failed.`);
+        console.error('Gemini API Error:', error.message);
+        throw new Error(`Failed to generate content: ${error.message}`);
     }
 };
 
-module.exports = { callGeminiAPI };
+/**
+ * Generate content (alias for callGeminiAPI for backwards compatibility)
+ * @param {string} prompt - The user prompt
+ * @param {string} systemInstruction - Optional system instruction
+ * @returns {Promise<string>} - The AI response text
+ */
+const generateContent = async (prompt, systemInstruction = '') => {
+    return callGeminiAPI(prompt, systemInstruction);
+};
+
+export default {
+    callGeminiAPI,
+    generateContent
+};
