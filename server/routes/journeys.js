@@ -1,12 +1,12 @@
-const express = require('express'); // Changed import to require
-const router = express.Router();    // Initialized router using express object
-const { auth } = require('../middleware/auth'); // Changed import to require and removed .js extension
-const GeminiService = require('../services/geminiService'); // Changed import to require
+const express = require('express');
+const router = express.Router();
+const { auth } = require('../middleware/auth');
+const GeminiService = require('../services/geminiService');
 const { callGeminiAPI } = GeminiService;
 
-// This object contains the full data for the predefined journeys
 const predefinedJourneys = {
   anxiety: {
+    id: 'anxiety',
     title: '7-Day Challenge to Reduce Anxiety',
     description: 'A 7-day plan with calming exercises and mindfulness techniques.',
     tasks: [
@@ -20,6 +20,7 @@ const predefinedJourneys = {
     ]
   },
   diet: {
+    id: 'diet',
     title: '7-Day Healthy Diet Challenge',
     description: 'A 7-day challenge to build better eating habits for your mind and body.',
     tasks: [
@@ -33,6 +34,7 @@ const predefinedJourneys = {
     ]
   },
   exercise: {
+    id: 'exercise',
     title: '7-Day Daily Exercise Challenge',
     description: 'Get your body moving to boost your mood and energy.',
     tasks: [
@@ -47,14 +49,10 @@ const predefinedJourneys = {
   }
 };
 
-// @route   GET /api/journeys
-// @desc    Get all predefined wellness journeys
 router.get('/', auth, (req, res) => {
     res.json(predefinedJourneys);
 });
 
-// @route   POST /api/journeys/custom
-// @desc    Generate a custom 7-day journey using AI
 router.post('/custom', auth, async (req, res) => {
     const { goal } = req.body;
     if (!goal) {
@@ -62,7 +60,6 @@ router.post('/custom', auth, async (req, res) => {
     }
 
     try {
-        // This is the prompt that tells the AI exactly what to do
         const prompt = `
             Act as an encouraging wellness coach for a college student. The student's goal is: "${goal}".
             
@@ -81,7 +78,6 @@ router.post('/custom', auth, async (req, res) => {
         
         const aiResponseText = await callGeminiAPI(prompt);
 
-        // This logic parses the AI's structured text response
         const lines = aiResponseText.split('\n').filter(line => line.trim() !== '');
         const title = lines[0]?.replace('Title: ', '').trim();
         const description = lines[1]?.replace('Description: ', '').trim();
@@ -93,11 +89,22 @@ router.post('/custom', auth, async (req, res) => {
             throw new Error("AI returned an invalid format.");
         }
 
-        res.json({ title, description, tasks });
+        res.json({ id: `custom-${Date.now()}`, title, description, tasks });
 
     } catch (err) {
         console.error("Error generating custom journey:", err.message);
         res.status(500).send('Error generating custom plan from AI');
+    }
+});
+
+router.put('/:id', auth, async (req, res) => {
+    try {
+        // This is a mock implementation. In a real application, you would save this to a database.
+        console.log(`Journey progress for ${req.params.id} updated:`, req.body.tasks);
+        res.json({ msg: 'Progress saved' });
+    } catch (err) {
+        console.error("Error saving journey progress:", err);
+        res.status(500).send('Server Error');
     }
 });
 
