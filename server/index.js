@@ -1,12 +1,19 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path'); // Import path module
 require('dotenv').config();
 
 const app = express();
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+    origin: 'https://manas-dost-lh3p.vercel.app',
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    credentials: true,
+    optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // DB Config
@@ -26,6 +33,7 @@ app.use('/api/chatbot', require('./routes/chatbot'));
 
 // Serve static assets if in production
 if (process.env.NODE_ENV === 'production') {
+    // Set static folder
     app.use(express.static('client/build'));
 
     app.get('*', (req, res) => {

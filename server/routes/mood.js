@@ -4,9 +4,9 @@ const { auth } = require('../middleware/auth');
 const MoodEntry = require('../models/MoodEntry');
 
 // @route   POST /api/mood
-// @desc    Log a new mood entry with a specific timestamp (multiple per day allowed)
+// @desc    Log a new mood entry with a specific timestamp
 router.post('/', auth, async (req, res) => {
-    const { mood } = req.body; // Expecting a mood value from 1-5
+    const { mood } = req.body;
 
     if (!mood || mood < 1 || mood > 5) {
         return res.status(400).json({ msg: 'Invalid mood value' });
@@ -16,6 +16,7 @@ router.post('/', auth, async (req, res) => {
         const newMoodEntry = new MoodEntry({
             user: req.user.id,
             mood: mood,
+            date: new Date() // Add current date to satisfy schema
         });
 
         await newMoodEntry.save();
