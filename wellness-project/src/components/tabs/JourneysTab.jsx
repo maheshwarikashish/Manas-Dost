@@ -55,15 +55,25 @@ const JourneysTab = () => {
                 theme: { colors: { bg: 'bg-[#FF6B6B]', text: 'text-[#FF6B6B]', border: 'border-[#FF6B6B]' } }
             });
             setView('display');
-        } catch (err) { alert("Sorry, could not generate a custom plan."); }
-        setIsLoading(false);
+        } catch (err) { alert("Sorry, could not generate a custom plan. Please try again later."); }
+        finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleToggleTask = (taskIndex) => {
+    const handleToggleTask = async (taskIndex) => {
         const updatedTasks = currentJourney.tasks.map((task, index) => 
             index === taskIndex ? { ...task, completed: !task.completed } : task
         );
         setCurrentJourney({ ...currentJourney, tasks: updatedTasks });
+
+        try {
+            // Assuming an endpoint to save journey progress exists
+            await api.put(`/journeys/${currentJourney.id}`, { tasks: updatedTasks });
+        } catch (err) {
+            console.error("Failed to save progress", err);
+            // Optionally revert the state change and show an error to the user
+        }
     };
 
     if (view === 'display') {

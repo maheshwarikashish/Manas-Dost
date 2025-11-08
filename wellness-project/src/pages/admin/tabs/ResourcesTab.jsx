@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { adminResources } from '../../../data/mockAdminData';
 import ReusableModal from '../../../components/admin/ReusableModal';
 
@@ -6,6 +6,7 @@ const ResourcesTab = () => {
     const [resources, setResources] = useState(adminResources);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingResource, setEditingResource] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleOpenModal = (resource = null) => {
         setEditingResource(resource);
@@ -31,6 +32,12 @@ const ResourcesTab = () => {
             setResources(resources.filter(r => r.id !== resourceId));
         }
     };
+
+    const filteredResources = useMemo(() => {
+        return resources.filter(res => 
+            res.title.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [resources, searchTerm]);
     
     return (
         <div>
@@ -38,8 +45,20 @@ const ResourcesTab = () => {
                 <h3 className="text-3xl font-bold text-slate-800">Resource Hub Management</h3>
                 <button onClick={() => handleOpenModal()} className="bg-green-600 text-white font-semibold px-5 py-2 rounded-lg shadow-md hover:bg-green-700 transition">Add New Resource</button>
             </div>
+            <div className="mb-6">
+                <form onSubmit={(e) => e.preventDefault()} className="flex items-center gap-2">
+                    <input 
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search resources..."
+                        className="w-full p-2 border border-gray-300 rounded-lg"
+                    />
+                    <button type="submit" className="bg-indigo-600 text-white font-semibold px-5 py-2 rounded-lg hover:bg-indigo-700 transition">Submit</button>
+                </form>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {resources.map(res => (
+                {filteredResources.map(res => (
                     <div key={res.id} className="bg-white p-4 rounded-lg shadow-md">
                         <h5 className="font-bold">{res.title}</h5>
                         <p className="text-sm text-slate-500">{res.type}</p>
