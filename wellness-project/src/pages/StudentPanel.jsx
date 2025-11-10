@@ -41,7 +41,7 @@ const getTitleFromPath = (path) => {
 };
 
 
-const StudentPanel = ({ user, onLogout }) => {
+const StudentPanel = ({ user, setUser, onLogout }) => {
     const navigate = useNavigate();
     const location = useLocation(); // Get the current location
     const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -87,7 +87,7 @@ const StudentPanel = ({ user, onLogout }) => {
                                     <Route path="community" element={<CommunityTab user={user} navigateToTab={navigateToTab} />} />
                                     <Route path="chat" element={<ChatTab user={user} navigateToTab={navigateToTab} />} />
                                     <Route path="booking" element={<BookingTab user={user} navigateToTab={navigateToTab} />} />
-                                    <Route path="profile" element={<ProfileTab user={user} navigateToTab={navigateToTab} />} />
+                                    <Route path="profile" element={<ProfileTab user={user} setUser={setUser} navigateToTab={navigateToTab} />} />
                                     <Route path="emergency" element={<EmergencyTab user={user} navigateToTab={navigateToTab} />} />
                                     
                                     <Route index element={<Navigate to="home" replace />} />

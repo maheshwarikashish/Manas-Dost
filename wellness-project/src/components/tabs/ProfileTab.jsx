@@ -1,149 +1,109 @@
-import React, { useState } from 'react';
-import api from '../../services/api';
+          
+import React, { useState, useEffect } from 'react';
+import { default as api } from '../../services/api';
+import FileUpload from '../FileUpload'; // Import the new component
 
-const ProfileTab = ({ user }) => {
-    // State to toggle between viewing and editing mode
-    const [isEditing, setIsEditing] = useState(false);
-    
-    // State to manage the form data
-    const [name, setName] = useState(user.name);
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    
-    // State for handling feedback messages
-    const [message, setMessage] = useState({ text: '', type: '' });
-    const [isLoading, setIsLoading] = useState(false);
+// --- Helper: Status Badge ---
+const StatusBadge = ({ status }) => {
+    const statusStyles = {
+        scheduled: 'bg-blue-100 text-blue-800',
+        completed: 'bg-green-100 text-green-800',
+        cancelled: 'bg-red-100 text-red-800',
+    };
+    return (
+        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+        </span>
+    );
+};
 
-    const handleSaveChanges = async (e) => {
-        e.preventDefault();
-        
-        // --- Client-side Validation ---
-        if (newPassword && newPassword !== confirmPassword) {
-            setMessage({ text: 'Passwords do not match.', type: 'error' });
-            return;
-        }
-        if (newPassword && newPassword.length < 6) {
-            setMessage({ text: 'Password must be at least 6 characters.', type: 'error' });
-            return;
-        }
+// --- Main ProfileTab Component ---
+const ProfileTab = ({ user, setUser }) => { // Accept setUser to update user state globally
+    const [appointments, setAppointments] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-        setIsLoading(true);
-        setMessage({ text: '', type: '' });
+    useEffect(() => {
+        const fetchAppointments = async () => {
+            if (!user?._id) {
+                setIsLoading(false);
+                return;
+            }
+            try {
+                const res = await api.get(`/appointments/student/${user._id}`);
+                setAppointments(res.data);
+            } catch (err) {
+                console.error("Failed to fetch appointments", err);
+                setError("Couldn't load appointments.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-        // Prepare the data to send to the backend.
-        // Only include the fields that are being changed.
-        const payload = { name };
-        if (newPassword) {
-            payload.password = newPassword;
-        }
-        
-        try {
-            // Send the update request to the backend route
-            await api.put('/auth/profile', payload);
-            setMessage({ text: 'Profile updated successfully!', type: 'success' });
-            
-            // Clear password fields and exit edit mode
-            setNewPassword('');
-            setConfirmPassword('');
-            setIsEditing(false);
-        } catch (err) {
-            setMessage({ text: err.response?.data?.msg || 'Failed to update profile. Please try again.', type: 'error' });
-        } finally {
-            setIsLoading(false);
-            // Clear the feedback message after a few seconds
-            setTimeout(() => setMessage({ text: '', type: '' }), 4000);
-        }
+        fetchAppointments();
+    }, [user]);
+
+    const handleUploadComplete = (newPhotoUrl) => {
+        // Update user state in the parent component (StudentPanel)
+        setUser(prevUser => ({ ...prevUser, photoUrl: newPhotoUrl }));
     };
 
-    const handleCancel = () => {
-        // Reset all form fields to their original state and exit edit mode
-        setName(user.name);
-        setNewPassword('');
-        setConfirmPassword('');
-        setIsEditing(false);
-    };
+    if (isLoading) {
+        return <div className="text-center p-8">Loading profile...</div>;
+    }
+
+    if (error) {
+        return <div className="text-center p-8 text-red-500">{error}</div>;
+    }
 
     return (
-        <div>
-            <h3 className="text-3xl font-bold text-slate-700 mb-6">My Profile</h3>
-            <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg max-w-2xl mx-auto">
-                {isEditing ? (
-                    // --- Edit View ---
-                    <form onSubmit={handleSaveChanges} className="space-y-4 animate-fade-in">
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-slate-600">Full Name</label>
-                            <input
-                                type="text"
-                                id="name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
+        <div className="w-full max-w-7xl mx-auto animate-fade-in p-4 sm:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* --- Left Column: Profile Card --- */}
+                <div className="lg:col-span-1">
+                    <div className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-teal-500 text-center">
+                        <div className="relative w-32 h-32 mx-auto mb-4">
+                            <img 
+                                src={user.photoUrl || 'https://via.placeholder.com/150'} 
+                                alt="Profile" 
+                                className="w-full h-full rounded-full object-cover border-4 border-white shadow-md"
                             />
+                            <FileUpload userId={user._id} onUploadComplete={handleUploadComplete} />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-600">Student ID (Cannot be changed)</label>
-                            <p className="mt-1 text-slate-500 p-2 bg-slate-100 rounded-md">{user.studentId}</p>
-                        </div>
-                        <hr/>
-                        <div>
-                            <label htmlFor="newPassword" className="block text-sm font-medium text-slate-600">New Password (leave blank to keep current)</label>
-                            <input
-                                type="password"
-                                id="newPassword"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-600">Confirm New Password</label>
-                            <input
-                                type="password"
-                                id="confirmPassword"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                            />
-                        </div>
-                        <div className="flex items-center justify-end space-x-3 pt-4">
-                            <button type="button" onClick={handleCancel} className="bg-slate-200 text-slate-800 font-semibold px-5 py-2 rounded-lg hover:bg-slate-300 transition">
-                                Cancel
-                            </button>
-                            <button type="submit" disabled={isLoading} className="bg-indigo-600 text-white font-semibold px-5 py-2 rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-400">
-                                {isLoading ? 'Saving...' : 'Save Changes'}
-                            </button>
-                        </div>
-                    </form>
-                ) : (
-                    // --- Display View ---
-                    <div className="space-y-4 animate-fade-in">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-600">Full Name</label>
-                            <p className="mt-1 text-lg font-semibold text-slate-800">{name}</p>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-600">Student ID</label>
-                            <p className="mt-1 text-lg font-semibold text-slate-800">{user.studentId}</p>
-                        </div>
-                        <div className="flex justify-end pt-4">
-                            <button onClick={() => setIsEditing(true)} className="bg-slate-800 text-white font-semibold px-5 py-2 rounded-lg hover:bg-slate-900 transition">
-                                Edit Profile
-                            </button>
-                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800">{user.name}</h2>
+                        <p className="text-sm text-gray-500 mt-1">{user.email}</p>
+                        <p className="mt-4 text-xs bg-gray-100 text-gray-600 rounded-full px-4 py-1 inline-block">Student</p>
                     </div>
-                )}
-                
-                {/* Feedback Message */}
-                {message.text && (
-                    <div className={`mt-4 text-sm font-medium ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                        {message.text}
+                </div>
+
+                {/* --- Right Column: Appointments --- */}
+                <div className="lg:col-span-2">
+                    <div className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-orange-500">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Your Appointments</h3>
+                        {appointments.length > 0 ? (
+                            <div className="space-y-4">
+                                {appointments.map(appt => (
+                                    <div key={appt._id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all hover:bg-gray-50">
+                                        <div>
+                                            <p className="font-semibold text-gray-800">Session with {appt.counselor.name}</p>
+                                            <p className="text-sm text-gray-600">
+                                                {new Date(appt.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at {appt.time}
+                                            </p>
+                                        </div>
+                                        <StatusBadge status={appt.status} />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-gray-500">You have no scheduled appointments. Use the "Book a Session" tab to get started.</p>
+                        )}
                     </div>
-                )}
+                </div>
+
             </div>
         </div>
     );
 };
 
 export default ProfileTab;
-

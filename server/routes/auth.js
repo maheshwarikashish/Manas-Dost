@@ -2,9 +2,39 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const CollegeStudent = require('../models/CollegeStudent.js');
+
+// --- Multer Configuration for File Uploads ---
+const storage = multer.diskStorage({
+    destination: './uploads/',
+    filename: function(req, file, cb) {
+        cb(null, 'user-' + req.user.id + '-' + Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 1000000 }, // 1MB limit
+    fileFilter: function(req, file, cb) {
+        checkFileType(file, cb);
+    }
+});
+
+function checkFileType(file, cb) {
+    const filetypes = /jpeg|jpg|png|gif/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+        return cb(null, true);
+    } else {
+        cb('Error: Images Only!');
+    }
+}
 
 // @route   POST /api/auth/register
 // @desc    Register a new student after verifying against the college roster
@@ -12,19 +42,16 @@ const CollegeStudent = require('../models/CollegeStudent.js');
 router.post('/register', async (req, res) => {
     const { name, studentId, password } = req.body;
     try {
-        // Step 1: Verify the Student ID against the official college database
         const isOfficialStudent = await CollegeStudent.findOne({ studentId });
         if (!isOfficialStudent) {
             return res.status(400).json({ msg: 'This Student ID is not found in the college records.' });
         }
 
-        // Step 2: Check if this student has already signed up for the app
         let user = await User.findOne({ studentId });
         if (user) {
             return res.status(400).json({ msg: 'This Student ID has already been registered.' });
         }
 
-        // Step 3: If all checks pass, create the new user account
         user = new User({ name, studentId, password });
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(password, salt);
@@ -52,7 +79,6 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ msg: 'Invalid Credentials' });
         }
         
-        // ENHANCED: Added a specific check to prevent admins from using the student login
         if (user.role !== 'student') {
             return res.status(403).json({ msg: 'Access Denied. Please use the admin login page.' });
         }
@@ -141,6 +167,33 @@ router.put('/profile', auth, async (req, res) => {
     } catch (err) {
         console.error("Profile update error:", err.message);
         res.status(500).send('Server Error');
+    }
+});
+
+// @route   PUT /api/auth/:id/photo
+// @desc    Upload a profile photo
+// @access  Private
+router.put('/:id/photo', [auth, upload.single('photo')], async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ msg: 'Please upload a file' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+
+        user.photoUrl = `/uploads/${req.file.filename}`;
+        await user.save();
+
+        const userToReturn = user.toObject();
+        delete userToReturn.password;
+        res.json(userToReturn);
+
+    } catch (err) {
+        console.error("Photo upload error:", err);
+        res.status(500).send('Server error');
     }
 });
 

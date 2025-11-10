@@ -1,20 +1,17 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path'); // Import path module
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
 
 // Middleware
-const corsOptions = {
-    origin: 'https://manas-dost-lh3p.vercel.app',
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    credentials: true,
-    optionsSuccessStatus: 204
-};
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(express.json());
+
+// Serve static files from the 'uploads' directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // DB Config
 const db = process.env.MONGO_URI;
@@ -30,7 +27,11 @@ app.use('/api/mood', require('./routes/mood'));
 app.use('/api/journeys', require('./routes/journeys'));
 app.use('/api/insights', require('./routes/insights'));
 app.use('/api/chatbot', require('./routes/chatbot'));
-app.use('/api/appointments', require('./routes/appointments')); // Add this line
+app.use('/api/appointments', require('./routes/appointments'));
+app.use('/api/counselors', require('./routes/counselors'));
+app.use('/api/posts', require('./routes/posts'));
+app.use('/api/resources', require('./routes/resources'));
+
 
 // Serve static assets if in production
 if (process.env.NODE_ENV === 'production') {
