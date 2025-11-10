@@ -11,8 +11,8 @@ const Stepper = ({ currentStep }) => {
     const steps = ['Counselor', 'Date', 'Time'];
     return (
         <div className="flex items-center justify-center mb-6 md:mb-8">
-            {steps.map((index, step) => (
-                <React.Fragment key={index}>
+            {steps.map((step, index) => (
+                <React.Fragment key={step}>
                     <div className="flex flex-col items-center">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg transition-colors duration-300
                             ${ currentStep > index + 1 ? 'bg-teal-500 text-white' : 
@@ -34,7 +34,7 @@ const Stepper = ({ currentStep }) => {
     );
 };
 
-const BookingTab = ({ navigateToTab }) => {
+const BookingTab = ({ user, navigateToTab }) => {
     const [counselors, setCounselors] = useState([]);
     const [appointments, setAppointments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -46,23 +46,28 @@ const BookingTab = ({ navigateToTab }) => {
 
     useEffect(() => {
         const fetchData = async () => {
+            setIsLoading(true);
             try {
-                console.log("Fetching data...");
-                const [counselorsRes, appointmentsRes] = await Promise.all([
-                    api.get('/counselors'),
-                    api.get(`/appointments/student/${localStorage.getItem("userId")}`)
-                ]);
-                console.log("Counselors response:", counselorsRes.data);
-                setCounselors(counselorsRes.data);
-                setAppointments(appointmentsRes.data);
-                console.log("Counselors state after setting:", counselors);
-            } catch (err) { 
-                console.error("Failed to fetch data", err); 
+                const promises = [api.get('/counselors')];
+                if (user?._id) {
+                    promises.push(api.get(`/appointments/student/${user._id}`));
+                }
+
+                const results = await Promise.all(promises);
+
+                setCounselors(results[0].data);
+
+                if (results.length > 1) {
+                    setAppointments(results[1].data);
+                }
+
+            } catch (err) {
+                console.error("Failed to fetch data", err);
             }
             finally { setIsLoading(false); }
         };
         fetchData();
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         const fetchAvailability = async () => {
@@ -112,11 +117,13 @@ const BookingTab = ({ navigateToTab }) => {
         setConfirmation('');
         setStep(1);
         const fetchData = async () => {
-            try {
-                const appointmentsRes = await api.get(`/appointments/student/${localStorage.getItem("userId")}`);
-                setAppointments(appointmentsRes.data);
-            } catch (err) { 
-                console.error("Failed to fetch data", err); 
+            if (user?._id) {
+                try {
+                    const appointmentsRes = await api.get(`/appointments/student/${user._id}`);
+                    setAppointments(appointmentsRes.data);
+                } catch (err) { 
+                    console.error("Failed to fetch data", err); 
+                }
             }
         };
         fetchData();
@@ -247,4 +254,4 @@ const BookingTab = ({ navigateToTab }) => {
     );
 };
 
-export default BookingTab; 
+export default BookingTab;
