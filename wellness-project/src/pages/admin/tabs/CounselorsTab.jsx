@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReusableModal from '../../../components/admin/ReusableModal';
-import api from '../../../services/api';
+import { default as api } from '../../../services/api';
 
 const CounselorsTab = () => {
     const [counselors, setCounselors] = useState([]);
