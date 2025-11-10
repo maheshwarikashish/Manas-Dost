@@ -67,9 +67,20 @@ const getCounselorAvailability = asyncHandler(async (req, res) => {
     const { date } = req.query;
     const { counselorId } = req.params;
 
+    const searchDate = new Date(date);
+
+    const startOfDay = new Date(searchDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(searchDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
     const appointments = await Appointment.find({ 
         counselor: counselorId,
-        date: new Date(date)
+        date: {
+            $gte: startOfDay,
+            $lt: endOfDay
+        }
     });
 
     const bookedTimes = appointments.map(appointment => appointment.time);
