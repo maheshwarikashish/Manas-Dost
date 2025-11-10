@@ -44,29 +44,37 @@ const BookingTab = ({ user, navigateToTab }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [availableTimes, setAvailableTimes] = useState([]);
 
+    // -- DECOUPLED DATA FETCHING --
+
+    // 1. Fetch counselors (public data)
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchCounselors = async () => {
             setIsLoading(true);
             try {
-                const promises = [api.get('/counselors')];
-                if (user?._id) {
-                    promises.push(api.get(`/appointments/student/${user._id}`));
-                }
-
-                const results = await Promise.all(promises);
-
-                setCounselors(results[0].data);
-
-                if (results.length > 1) {
-                    setAppointments(results[1].data);
-                }
-
+                const res = await api.get('/counselors');
+                setCounselors(res.data);
             } catch (err) {
-                console.error("Failed to fetch data", err);
+                console.error("Failed to fetch counselors", err);
+            } finally {
+                setIsLoading(false);
             }
-            finally { setIsLoading(false); }
         };
-        fetchData();
+        fetchCounselors();
+    }, []);
+
+    // 2. Fetch user's appointments (private data)
+    useEffect(() => {
+        const fetchAppointments = async () => {
+            if (user?._id) { // Only fetch if user ID exists
+                try {
+                    const res = await api.get(`/appointments/student/${user._id}`);
+                    setAppointments(res.data);
+                } catch (err) {
+                    console.error("Failed to fetch appointments", err);
+                }
+            }
+        };
+        fetchAppointments();
     }, [user]);
 
     useEffect(() => {
@@ -116,17 +124,17 @@ const BookingTab = ({ user, navigateToTab }) => {
         setSelection({ counselor: null, date: null, time: null });
         setConfirmation('');
         setStep(1);
-        const fetchData = async () => {
+        const fetchAppointments = async () => {
             if (user?._id) {
                 try {
-                    const appointmentsRes = await api.get(`/appointments/student/${user._id}`);
-                    setAppointments(appointmentsRes.data);
+                    const res = await api.get(`/appointments/student/${user._id}`);
+                    setAppointments(res.data);
                 } catch (err) { 
-                    console.error("Failed to fetch data", err); 
+                    console.error("Failed to fetch appointments", err); 
                 }
             }
         };
-        fetchData();
+        fetchAppointments();
     };
 
     const isBookingComplete = selection.counselor && selection.date && selection.time;
@@ -178,7 +186,7 @@ const BookingTab = ({ user, navigateToTab }) => {
                     <div className={`transition-opacity duration-500 ${step < 1 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
                         <h4 className="font-bold text-lg mb-3 text-gray-800">1. Select a Counselor</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {counselors.map(c => (
+                           {counselors.length > 0 ? counselors.map(c => (
                                 <div key={c._id} onClick={() => handleSelect('counselor', c._id)} className={`p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 
                                     ${selection.counselor === c._id 
                                         ? 'bg-teal-50 border-teal-500 ring-2 ring-teal-100' 
@@ -186,7 +194,7 @@ const BookingTab = ({ user, navigateToTab }) => {
                                     <p className="font-semibold text-gray-800">{c.name}</p>
                                     <p className="text-xs text-gray-500">{c.specialty}</p>
                                 </div>
-                            ))}
+                            )) : <p className="col-span-full text-gray-500">No counselors are available at this time.</p>}
                         </div>
                     </div>
                     
