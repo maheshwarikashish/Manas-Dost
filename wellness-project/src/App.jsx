@@ -68,7 +68,7 @@ function App() {
     const handleAdminLogin = async (id, password) => {
         try {
             // Path is correct: /auth/admin-login
-            const res = await api.post('/auth/admin-login', { studentId: id, password });
+            const res = await api.post('/auth/admin-login', { adminId: id, password });
             localStorage.setItem('token', res.data.token);
             setIsAdmin(true);
             return { success: true };
