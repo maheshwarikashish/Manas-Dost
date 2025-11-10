@@ -22,6 +22,7 @@ const allowedOrigins = [
     'https://manas-dost-lh3p.vercel.app', 
     'http://localhost:3000', 
     'http://localhost:3001',
+    'https://manas-dost-frontend.vercel.app' // Added your new frontend URL
 ];
 
 const corsOptions = {
