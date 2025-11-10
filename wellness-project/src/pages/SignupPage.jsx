@@ -52,7 +52,7 @@ const SignupPage = ({ onSignup }) => {
             <div className="absolute bottom-0 -right-4 w-72 h-72 bg-[#00A896]/20 rounded-full filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
 
             <div className="w-full max-w-md z-10 animate-fade-in-up">
-                <div className="bg-white p-8 rounded-2xl shadow-lg text-center border-t-4 border-[#FF9F43]">
+                <div className="bg-white p-8 rounded-2xl shadow-lg text-center  border-[#FF9F43]">
                     <div className="mx-auto mb-4 w-14 h-14 bg-gradient-to-br from-[#FF9F43] to-[#FF6B6B] rounded-full flex items-center justify-center shadow-md">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
