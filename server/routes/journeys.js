@@ -182,4 +182,35 @@ router.put('/:id', auth, async (req, res) => {
     }
 });
 
+// DELETE a journey by its database _id
+router.delete('/:id', auth, async (req, res) => {
+    const journeyDbId = req.params.id;
+
+    try {
+        const journey = await Journey.findById(journeyDbId);
+
+        if (!journey) {
+            return res.status(404).json({ msg: 'Journey not found' });
+        }
+
+        // Ensure the journey belongs to the user making the request
+        if (journey.user.toString() !== req.user.id) {
+            return res.status(401).json({ msg: 'User not authorized' });
+        }
+
+        // Correctly use findByIdAndDelete
+        await Journey.findByIdAndDelete(journeyDbId);
+
+        res.json({ msg: 'Journey removed' });
+    } catch (err) {
+        console.error('Error deleting journey:', err.message);
+        // Handle cases where the ID format is incorrect
+        if (err.kind === 'ObjectId') {
+            return res.status(404).json({ msg: 'Journey not found' });
+        }
+        res.status(500).send('Server Error');
+    }
+});
+
+
 module.exports = router;
