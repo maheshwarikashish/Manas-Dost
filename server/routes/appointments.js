@@ -7,7 +7,7 @@ const {
   updateAppointment,
   getCounselorAvailability,
 } = require('../controllers/appointmentController');
-const { protect, admin } = require('../middleware/auth');
+const { auth: protect, adminAuth: admin } = require('../middleware/auth');
 
 router
   .route('/')
