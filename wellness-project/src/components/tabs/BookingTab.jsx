@@ -11,7 +11,7 @@ const Stepper = ({ currentStep }) => {
     const steps = ['Counselor', 'Date', 'Time'];
     return (
         <div className="flex items-center justify-center mb-6 md:mb-8">
-            {steps.map((step, index) => (
+            {steps.map((index, step) => (
                 <React.Fragment key={index}>
                     <div className="flex flex-col items-center">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg transition-colors duration-300
@@ -47,12 +47,15 @@ const BookingTab = ({ navigateToTab }) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                console.log("Fetching data...");
                 const [counselorsRes, appointmentsRes] = await Promise.all([
                     api.get('/counselors'),
                     api.get(`/appointments/student/${localStorage.getItem("userId")}`)
                 ]);
+                console.log("Counselors response:", counselorsRes.data);
                 setCounselors(counselorsRes.data);
                 setAppointments(appointmentsRes.data);
+                console.log("Counselors state after setting:", counselors);
             } catch (err) { 
                 console.error("Failed to fetch data", err); 
             }
@@ -244,4 +247,4 @@ const BookingTab = ({ navigateToTab }) => {
     );
 };
 
-export default BookingTab;
+export default BookingTab; 
