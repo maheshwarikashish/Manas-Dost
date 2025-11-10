@@ -1,12 +1,25 @@
-import React, { useState, useMemo } from 'react';
-import { adminResources } from '../../../data/mockAdminData';
+import React, { useState, useMemo, useEffect } from 'react';
 import ReusableModal from '../../../components/admin/ReusableModal';
+import { api } from '../../../services/api';
 
 const ResourcesTab = () => {
-    const [resources, setResources] = useState(adminResources);
+    const [resources, setResources] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingResource, setEditingResource] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    const fetchResources = async () => {
+        try {
+            const response = await api.get('/resources');
+            setResources(response.data);
+        } catch (error) {
+            console.error("Failed to fetch resources:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchResources();
+    }, []);
 
     const handleOpenModal = (resource = null) => {
         setEditingResource(resource);
@@ -18,18 +31,28 @@ const ResourcesTab = () => {
         setIsModalOpen(false);
     };
 
-    const handleSave = (formData) => {
-        if (editingResource) {
-            setResources(resources.map(r => r.id === editingResource.id ? { ...r, ...formData } : r));
-        } else {
-            setResources([...resources, { id: Date.now(), ...formData }]);
+    const handleSave = async (formData) => {
+        try {
+            if (editingResource) {
+                await api.put(`/resources/${editingResource._id}`, formData);
+            } else {
+                await api.post('/resources', formData);
+            }
+            fetchResources(); // Refetch to update the list
+            handleCloseModal();
+        } catch (error) {
+            console.error("Failed to save resource:", error);
         }
-        handleCloseModal();
     };
 
-    const handleDelete = (resourceId) => {
-        if (window.confirm('Are you sure?')) {
-            setResources(resources.filter(r => r.id !== resourceId));
+    const handleDelete = async (resourceId) => {
+        if (window.confirm('Are you sure you want to delete this resource?')) {
+            try {
+                await api.delete(`/resources/${resourceId}`);
+                fetchResources(); // Refetch to update the list
+            } catch (error) {
+                console.error("Failed to delete resource:", error);
+            }
         }
     };
 
@@ -59,12 +82,12 @@ const ResourcesTab = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredResources.map(res => (
-                    <div key={res.id} className="bg-white p-4 rounded-lg shadow-md">
+                    <div key={res._id} className="bg-white p-4 rounded-lg shadow-md">
                         <h5 className="font-bold">{res.title}</h5>
                         <p className="text-sm text-slate-500">{res.type}</p>
                         <div className="mt-4 flex space-x-2">
                             <button onClick={() => handleOpenModal(res)} className="text-sm bg-slate-200 px-3 py-1 rounded hover:bg-slate-300">Edit</button>
-                            <button onClick={() => handleDelete(res.id)} className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200">Delete</button>
+                            <button onClick={() => handleDelete(res._id)} className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200">Delete</button>
                         </div>
                     </div>
                 ))}
@@ -74,13 +97,12 @@ const ResourcesTab = () => {
     );
 };
 
-// Form component inside a modal for adding/editing resources
 const ResourceFormModal = ({ isOpen, onClose, onSave, resource }) => {
     const [formData, setFormData] = useState({ title: '', type: 'Article', content: '' });
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (resource) {
-            setFormData(resource);
+            setFormData({ title: resource.title, type: resource.type, content: resource.content });
         } else {
             setFormData({ title: '', type: 'Article', content: '' });
         }
@@ -112,6 +134,5 @@ const ResourceFormModal = ({ isOpen, onClose, onSave, resource }) => {
         </ReusableModal>
     );
 };
-
 
 export default ResourcesTab;

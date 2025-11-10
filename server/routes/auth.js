@@ -6,6 +6,26 @@ const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const CollegeStudent = require('../models/CollegeStudent.js');
 
+// --- ADDED: Temporary utility to hash a password ---
+// @route   POST /api/auth/hash-password
+// @desc    Takes a plain password and returns a bcrypt hash. For maintenance only.
+// @access  Public (temporary)
+router.post('/hash-password', async (req, res) => {
+    const { password } = req.body;
+    if (!password) {
+        return res.status(400).json({ msg: 'Please provide a password to hash.' });
+    }
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        res.json({ original: password, hash: hashedPassword });
+    } catch (err) {
+        res.status(500).send('Server error during hashing.');
+    }
+});
+// --- END of temporary utility ---
+
+
 // @route   POST /api/auth/register
 // @desc    Register a new student after verifying against the college roster
 // @access  Public
@@ -145,4 +165,3 @@ router.put('/profile', auth, async (req, res) => {
 });
 
 module.exports = router;
-
