@@ -101,7 +101,15 @@ const BookingTab = ({ user, navigateToTab }) => {
     }, []);
 
     const handleSelect = (type, value) => {
-        setSelection(prev => ({ ...prev, [type]: value, time: type === 'date' ? null : prev.time }));
+        setSelection(prev => {
+            const newSelection = { ...prev, [type]: value };
+            // If the date is changed, reset the time
+            if (type === 'date') {
+                newSelection.time = null;
+            }
+            return newSelection;
+        });
+
         if (type === 'counselor' && step < 2) setStep(2);
         if (type === 'date' && step < 3) setStep(3);
     };
