@@ -60,26 +60,45 @@ const CounselorsTab = () => {
     };
     
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-3xl font-bold text-slate-800">Counselor Management</h3>
-                <button onClick={() => handleOpenModal()} className="bg-green-600 text-white font-semibold px-5 py-2 rounded-lg shadow-md hover:bg-green-700 transition">Add New Counselor</button>
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="flex justify-between items-center mb-8">
+                <h3 className="text-4xl font-bold text-gray-800">Counselor Management</h3>
+                <button onClick={() => handleOpenModal()} className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105">
+                    Add New Counselor
+                </button>
             </div>
 
-            {isLoading ? <p>Loading counselors...</p> : (
-                <div className="bg-white p-4 rounded-xl shadow-md space-y-3">
-                    {counselors.map(c => (
-                        <div key={c._id} className="p-4 border-b last:border-b-0 flex justify-between items-center">
-                            <div>
-                                <h5 className="font-bold text-lg">{c.name}</h5>
-                                <p className="text-sm text-slate-500">{c.specialty}</p>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                                <button onClick={() => handleOpenModal(c)} className="text-sm bg-slate-200 px-3 py-1 rounded hover:bg-slate-300">Edit</button>
-                                <button onClick={() => handleDelete(c._id)} className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200">Remove</button>
-                            </div>
-                        </div>
-                    ))}
+            {isLoading ? <div className="text-center p-10">Loading counselors...</div> : (
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-100">
+                                <tr>
+                                    <th scope="col" className="px-8 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                                    <th scope="col" className="px-8 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">Specialty</th>
+                                    <th scope="col" className="px-8 py-4 text-right text-sm font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {counselors.map(c => (
+                                    <tr key={c._id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-8 py-5 whitespace-nowrap">
+                                            <div className="text-md font-medium text-gray-900">{c.name}</div>
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap">
+                                            <div className="text-md text-gray-600">{c.specialty}</div>
+                                        </td>
+                                        <td className="px-8 py-5 whitespace-nowrap text-right text-md font-medium">
+                                            <div className="flex items-center justify-end space-x-5">
+                                                <button onClick={() => handleOpenModal(c)} className="text-indigo-600 hover:text-indigo-800 font-semibold">Edit</button>
+                                                <button onClick={() => handleDelete(c._id)} className="text-red-600 hover:text-red-800 font-semibold">Remove</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
             
@@ -111,15 +130,22 @@ const CounselorFormModal = ({ isOpen, onClose, onSave, counselor }) => {
 
     return (
         <ReusableModal isOpen={isOpen} onClose={onClose} title={counselor ? 'Edit Counselor' : 'Add New Counselor'}>
-            <form onSubmit={handleSubmit}>
-                <div className="space-y-4">
-                    <div><label className="block font-semibold text-slate-700 mb-1">Name</label><input name="name" value={formData.name} onChange={handleChange} type="text" className="w-full p-2 border rounded-lg" required /></div>
-                    <div><label className="block font-semibold text-slate-700 mb-1">Specialty</label><input name="specialty" value={formData.specialty} onChange={handleChange} type="text" className="w-full p-2 border rounded-lg" required /></div>
-                    <div><label className="block font-semibold text-slate-700 mb-1">Biography</label><textarea name="bio" value={formData.bio} onChange={handleChange} className="w-full p-2 border rounded-lg h-24" placeholder="Briefly describe the counselor..."></textarea></div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                    <input name="name" value={formData.name} onChange={handleChange} type="text" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition" required />
                 </div>
-                <div className="mt-6 flex justify-end space-x-3">
-                    <button type="button" onClick={onClose} className="bg-slate-200 text-slate-800 font-semibold px-5 py-2 rounded-lg hover:bg-slate-300">Cancel</button>
-                    <button type="submit" className="bg-indigo-600 text-white font-semibold px-5 py-2 rounded-lg hover:bg-indigo-700">Save Counselor</button>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Specialty</label>
+                    <input name="specialty" value={formData.specialty} onChange={handleChange} type="text" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition" required />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Biography</label>
+                    <textarea name="bio" value={formData.bio} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg h-32 focus:ring-2 focus:ring-indigo-500 transition" placeholder="Briefly describe the counselor..."></textarea>
+                </div>
+                <div className="pt-4 flex justify-end space-x-4">
+                    <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 font-semibold px-6 py-2 rounded-lg hover:bg-gray-300 transition">Cancel</button>
+                    <button type="submit" className="bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 transition">Save Counselor</button>
                 </div>
             </form>
         </ReusableModal>
