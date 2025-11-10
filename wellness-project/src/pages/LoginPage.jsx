@@ -10,7 +10,6 @@ const SpinnerIcon = () => <svg className="animate-spin h-5 w-5 text-white" xmlns
 const GoogleIcon = () => <svg className="w-5 h-5" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"></path><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.222 0-9.618-3.217-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"></path><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.012 36.49 44 30.638 44 24c0-1.341-.138-2.65-.389-3.917z"></path></svg>;
 const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>;
 
-
 const LoginPage = ({ onLogin }) => {
     const [id, setId] = useState('');
     const [password, setPassword] = useState('');
@@ -38,56 +37,59 @@ const LoginPage = ({ onLogin }) => {
     };
 
     return (
-        <section className="min-h-screen flex items-center justify-center bg-gray-100 p-4 sm:p-6 lg:p-8">
-            <div className="w-full max-w-md">
-                <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg animate-fade-in-up text-center">
-                    <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-9 w-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <section className="min-h-screen flex items-center justify-center bg-[#FFF9F0] p-4 relative overflow-hidden">
+            <div className="absolute top-0 -left-4 w-72 h-72 bg-[#FF9F43]/20 rounded-full filter blur-xl opacity-70 animate-blob"></div>
+            <div className="absolute bottom-0 -right-4 w-72 h-72 bg-[#00A896]/20 rounded-full filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+
+            <div className="w-full max-w-md z-10 animate-fade-in-up">
+                <div className="bg-white p-8 rounded-2xl shadow-lg text-center border-t-4 border-[#FF9F43]">
+                    <div className="mx-auto mb-4 w-14 h-14 bg-gradient-to-br from-[#FF9F43] to-[#FF6B6B] rounded-full flex items-center justify-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
 
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-800">Student Login</h2>
-                    <p className="text-gray-600 mb-6 sm:mb-8">Welcome back to Manas Dost.</p>
-                    
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2"><UserIcon /></span>
-                            <input type="text" placeholder="Student ID" className="w-full p-3 pl-12 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-500 transition" value={id} onChange={(e) => setId(e.target.value)} required />
+                    <h2 className="text-3xl font-bold mb-2 text-[#2C3E50]">Student Login</h2>
+                    <p className="text-[#2C3E50]/80 mb-6">Welcome back to Manas Dost.</p>
+                    <form onSubmit={handleSubmit}>
+                         <div className="space-y-4">
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2"><UserIcon /></span>
+                                <input type="text" placeholder="Student ID" className="w-full p-3 pl-10 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF9F43]/50 focus:border-[#FF9F43] transition" value={id} onChange={(e) => setId(e.target.value)} required />
+                            </div>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2"><LockIcon /></span>
+                                <input type={showPassword ? 'text' : 'password'} placeholder="Password" className="w-full p-3 pl-10 pr-10 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF9F43]/50 focus:border-[#FF9F43] transition" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#00A896]">
+                                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                                </button>
+                            </div>
                         </div>
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2"><LockIcon /></span>
-                            <input type={showPassword ? 'text' : 'password'} placeholder="Password" className="w-full p-3 pl-12 pr-12 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-yellow-500 transition" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-teal-500">
-                                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                            </button>
-                        </div>
-                        
-                        <button type="submit" disabled={isLoading} className="w-full bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-yellow-600 hover:shadow-lg transform hover:-translate-y-0.5 transition-all flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed">
+                        <button type="submit" disabled={isLoading} className="w-full mt-6 bg-[#FF9F43] text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-[#E88E33] hover:shadow-lg transform hover:-translate-y-0.5 transition-all flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed">
                             {isLoading ? <SpinnerIcon /> : 'Login'}
                         </button>
 
-                        {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
+                        {error && <p className="text-[#FF6B6B] text-sm mt-4">{error}</p>}
                     </form>
 
                     <div className="flex items-center my-6">
-                        <div className="flex-grow border-t border-gray-200"></div>
+                        <div className="flex-grow border-t border-gray-300"></div>
                         <span className="flex-shrink mx-4 text-sm text-gray-500">Or continue with</span>
-                        <div className="flex-grow border-t border-gray-200"></div>
+                        <div className="flex-grow border-t border-gray-300"></div>
                     </div>
 
-                    <button className="w-full py-3 px-4 border border-gray-300 rounded-lg flex items-center justify-center space-x-3 hover:bg-gray-50 transition-colors">
+                    <button className="w-full py-3 px-4 border border-gray-300 rounded-lg flex items-center justify-center space-x-2 hover:bg-gray-50 transition-colors">
                         <GoogleIcon />
-                        <span className="font-semibold text-gray-700">Continue with Google</span>
+                        <span className="font-semibold text-[#2C3E50]">Continue with Google</span>
                     </button>
 
-                    <p className="text-sm text-gray-600 mt-6">
+                    <p className="text-sm text-[#2C3E50]/80 mt-6">
                         Don't have an account?{' '}
-                        <Link to="/signup" className="font-semibold text-teal-500 hover:underline">
+                        <Link to="/signup" className="font-semibold text-[#00A896] hover:underline">
                             Sign Up
                         </Link>
                     </p>
 
-                    <div className="mt-8 border-t border-gray-200 pt-5">
-                        <Link to="/" className="text-sm text-gray-500 hover:text-gray-700 hover:underline flex items-center justify-center w-full">
+                    <div className="mt-6 border-t border-gray-200 pt-4">
+                        <Link to="/" className="text-sm text-[#2C3E50]/60 hover:text-[#2C3E50] hover:underline flex items-center justify-center w-full">
                             <ArrowLeftIcon />
                             Back to Home Page
                         </Link>
