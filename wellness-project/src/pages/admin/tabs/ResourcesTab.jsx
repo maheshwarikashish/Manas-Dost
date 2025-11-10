@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import ReusableModal from '../../../components/admin/ReusableModal';
-import { api } from '../../../services/api';
+import api from '../../../services/api';
 
 const ResourcesTab = () => {
     const [resources, setResources] = useState([]);
