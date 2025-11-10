@@ -30,6 +30,7 @@ app.use('/api/mood', require('./routes/mood'));
 app.use('/api/journeys', require('./routes/journeys'));
 app.use('/api/insights', require('./routes/insights'));
 app.use('/api/chatbot', require('./routes/chatbot'));
+app.use('/api/appointments', require('./routes/appointments')); // Add this line
 
 // Serve static assets if in production
 if (process.env.NODE_ENV === 'production') {

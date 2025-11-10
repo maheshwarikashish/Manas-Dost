@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import api from '../../services/api';
+import { default as api } from '../../services/api';
 
 // --- SVG Icons ---
 const SpinnerIcon = () => <svg className="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
@@ -35,22 +36,44 @@ const Stepper = ({ currentStep }) => {
 
 const BookingTab = ({ navigateToTab }) => {
     const [counselors, setCounselors] = useState([]);
+    const [appointments, setAppointments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [step, setStep] = useState(1);
     const [selection, setSelection] = useState({ counselor: null, date: null, time: null });
     const [confirmation, setConfirmation] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [availableTimes, setAvailableTimes] = useState([]);
 
     useEffect(() => {
-        const fetchCounselors = async () => {
+        const fetchData = async () => {
             try {
-                const res = await api.get('/counselors');
-                setCounselors(res.data);
-            } catch (err) { console.error("Failed to fetch counselors", err); }
+                const [counselorsRes, appointmentsRes] = await Promise.all([
+                    api.get('/counselors'),
+                    api.get(`/appointments/student/${localStorage.getItem("userId")}`)
+                ]);
+                setCounselors(counselorsRes.data);
+                setAppointments(appointmentsRes.data);
+            } catch (err) { 
+                console.error("Failed to fetch data", err); 
+            }
             finally { setIsLoading(false); }
         };
-        fetchCounselors();
+        fetchData();
     }, []);
+
+    useEffect(() => {
+        const fetchAvailability = async () => {
+            if (selection.counselor && selection.date) {
+                try {
+                    const res = await api.get(`/appointments/counselor/${selection.counselor}/availability?date=${selection.date.toISOString()}`);
+                    setAvailableTimes(res.data);
+                } catch (err) {
+                    console.error("Failed to fetch availability", err);
+                }
+            }
+        };
+        fetchAvailability();
+    }, [selection.counselor, selection.date]);
 
     const availableDates = useMemo(() => {
         const dates = []; const today = new Date();
@@ -61,10 +84,8 @@ const BookingTab = ({ navigateToTab }) => {
         return dates;
     }, []);
 
-    const availableTimes = ["09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM"];
-
     const handleSelect = (type, value) => {
-        setSelection(prev => ({ ...prev, [type]: value }));
+        setSelection(prev => ({ ...prev, [type]: value, time: type === 'date' ? null : prev.time }));
         if (type === 'counselor' && step < 2) setStep(2);
         if (type === 'date' && step < 3) setStep(3);
     };
@@ -72,7 +93,7 @@ const BookingTab = ({ navigateToTab }) => {
     const handleConfirmBooking = async () => {
         setIsSubmitting(true);
         try {
-            await api.post('/appointments', { counselorId: selection.counselor, date: selection.date, time: selection.time });
+            await api.post('/appointments', { counselor: selection.counselor, date: selection.date, time: selection.time });
             const selectedCounselor = counselors.find(c => c._id === selection.counselor);
             const dateString = selection.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
             setConfirmation(`Your session with ${selectedCounselor.name} is confirmed for ${dateString} at ${selection.time}.`);
@@ -87,12 +108,21 @@ const BookingTab = ({ navigateToTab }) => {
         setSelection({ counselor: null, date: null, time: null });
         setConfirmation('');
         setStep(1);
+        const fetchData = async () => {
+            try {
+                const appointmentsRes = await api.get(`/appointments/student/${localStorage.getItem("userId")}`);
+                setAppointments(appointmentsRes.data);
+            } catch (err) { 
+                console.error("Failed to fetch data", err); 
+            }
+        };
+        fetchData();
     };
 
     const isBookingComplete = selection.counselor && selection.date && selection.time;
 
     if (isLoading) {
-        return <div className="w-full max-w-7xl mx-auto flex items-center justify-center gap-2 text-gray-500 p-8"><SpinnerIcon /><span>Loading available counselors...</span></div>;
+        return <div className="w-full max-w-7xl mx-auto flex items-center justify-center gap-2 text-gray-500 p-8"><SpinnerIcon /><span>Loading...</span></div>;
     }
 
     if (confirmation) {
@@ -170,14 +200,14 @@ const BookingTab = ({ navigateToTab }) => {
                     <div className={`transition-opacity duration-500 ${step < 3 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
                        <h4 className="font-bold text-lg mb-3 text-gray-800">3. Choose an Available Time</h4>
                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                           {availableTimes.map(time => (
+                           {availableTimes.length > 0 ? availableTimes.map(time => (
                                <button key={time} onClick={() => handleSelect('time', time)} className={`p-3 border-2 rounded-lg font-semibold transition-colors duration-200 
                                     ${selection.time === time 
                                         ? 'bg-teal-500 text-white border-transparent shadow-md' 
                                         : 'border-gray-200 text-gray-800 hover:bg-gray-100 hover:border-gray-400'}`}>
                                    {time}
                                </button>
-                           ))}
+                           )) : <p className='col-span-full text-gray-500'>No available times for this date.</p>}
                        </div>
                    </div>
                 </div>
@@ -188,6 +218,27 @@ const BookingTab = ({ navigateToTab }) => {
                         {isSubmitting ? <SpinnerIcon /> : 'Confirm Appointment'}
                     </button>
                 </div>
+            </div>
+
+            <div className="mt-10">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Your Appointments</h3>
+                {appointments.length > 0 ? (
+                    <div className="space-y-4">
+                        {appointments.map(appt => (
+                            <div key={appt._id} className="bg-white p-4 rounded-lg shadow flex justify-between items-center">
+                                <div>
+                                    <p className="font-semibold">{appt.counselor.name}</p>
+                                    <p className="text-sm text-gray-600">{new Date(appt.date).toLocaleDateString()} at {appt.time}</p>
+                                </div>
+                                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${appt.status === 'scheduled' ? 'bg-blue-100 text-blue-800' : appt.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                    {appt.status}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-gray-500">You have no appointments.</p>
+                )}
             </div>
         </div>
     );
