@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import axios from 'axios';
+import api from './services/api'; // Corrected import
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -12,31 +12,52 @@ const App = () => {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const response = await axios.get('/api/user');
+                // Use the 'api' instance and the correct endpoint
+                const response = await api.get('/auth'); 
                 setUser(response.data);
             } catch (error) {
                 console.error('Error fetching user:', error);
+                // If the error is a 401 (unauthorized), the user isn't logged in
+                // which is an expected state, so we don't need to treat it as a critical error.
+                setUser(null);
             }
         };
 
-        fetchUser();
+        // Only fetch user if a token exists
+        if (localStorage.getItem('token')) {
+            fetchUser();
+        }
     }, []);
 
     const handleLogout = () => {
-        // Implement logout logic here
+        localStorage.removeItem('token');
         setUser(null);
     };
 
     return (
         <Router>
             <Routes>
+                {/* Landing Page is the default route */}
                 <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage setUser={setUser} />} />
-                <Route path="/register" element={<SignupPage />} />
+
+                {/* Login and Signup pages are accessible only if the user is NOT logged in */}
+                <Route 
+                    path="/login" 
+                    element={user ? <Navigate to="/student-panel" /> : <LoginPage setUser={setUser} />}
+                />
+                <Route 
+                    path="/signup" 
+                    element={user ? <Navigate to="/student-panel" /> : <SignupPage />}
+                />
+
+                {/* Student Panel is a protected route */}
                 <Route 
                     path="/student-panel" 
-                    element={user ? <StudentPanel user={user} setUser={setUser} handleLogout={handleLogout} /> : <Navigate to="/login" />}
+                    element={user ? <StudentPanel user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
                 />
+
+                {/* Add a catch-all or a 404 page if desired */}
+                <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </Router>
     );
