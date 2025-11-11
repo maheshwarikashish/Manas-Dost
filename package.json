@@ -3,7 +3,7 @@
     "react-router-dom": "^7.9.2"
   },
   "scripts": {
-    "start": "cd server && npm start",
+    "start": "cd server && npm install && npm start",
     "build": "cd server && npm install"
   }
 }
