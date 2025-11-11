@@ -1,100 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { default as api } from '../../services/api';
-import FileUpload from '../FileUpload'; // Assuming this component handles the upload icon and logic
+import FileUpload from '../FileUpload'; // Handles profile picture uploads
 
 // --- SVG Icons ---
-const EyeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
-const EyeOffIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7 .996-3.184 3.3-5.757 6.1-6.918M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.593 4.407A9.953 9.953 0 0121.542 12c-1.274 4.057-5.064 7-9.542 7a9.953 9.953 0 01-2.093-.21L4.407 4.407m13.186 0L4.407 17.593" /></svg>;
+const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
+const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
+const ChevronRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
 const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>;
 
-// --- Helper Components ---
-const StatusBadge = ({ status }) => {
-    const statusStyles = {
-        scheduled: 'bg-blue-100 text-blue-800',
-        completed: 'bg-green-100 text-green-800',
-        cancelled: 'bg-red-100 text-red-800',
-    };
-    return (
-        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-        </span>
-    );
-};
-
-const ChangePasswordForm = ({ user }) => {
-    const [currentPassword, setCurrentPassword] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [showPasswords, setShowPasswords] = useState({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [formError, setFormError] = useState('');
-    const [formSuccess, setFormSuccess] = useState('');
-
-    const toggleShowPassword = (field) => {
-        setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (newPassword !== confirmPassword) {
-            setFormError('New passwords do not match.');
-            return;
-        }
-        setIsSubmitting(true);
-        setFormError('');
-        setFormSuccess('');
-        try {
-            await api.put('/auth/change-password', { userId: user._id, currentPassword, newPassword });
-            setFormSuccess('Password changed successfully!');
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-        } catch (err) {
-            setFormError(err.response?.data?.message || 'An error occurred. Please try again.');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const PasswordInput = ({ value, onChange, placeholder, field }) => (
-        <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2"><LockIcon /></span>
-            <input
-                type={showPasswords[field] ? 'text' : 'password'}
-                placeholder={placeholder}
-                className="w-full p-3 pl-10 pr-10 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/50"
-                value={value}
-                onChange={onChange}
-                required
-            />
-            <button type="button" onClick={() => toggleShowPassword(field)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-teal-500">
-                {showPasswords[field] ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-        </div>
-    );
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <PasswordInput value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Current Password" field="current" />
-            <PasswordInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New Password" field="new" />
-            <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm New Password" field="confirm" />
-            
-            {formError && <p className="text-red-500 text-sm">{formError}</p>}
-            {formSuccess && <p className="text-green-500 text-sm">{formSuccess}</p>}
-
-            <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto bg-teal-500 text-white font-bold py-2.5 px-6 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all disabled:opacity-50">
-                {isSubmitting ? 'Updating...' : 'Update Password'}
-            </button>
-        </form>
-    );
-};
 
 // --- Main ProfileTab Component ---
-const ProfileTab = ({ user, setUser }) => {
-    const [activeTab, setActiveTab] = useState('appointments');
+const ProfileTab = ({ user, setUser, handleLogout }) => {
+    const [view, setView] = useState('main'); // 'main' or 'edit'
     const [appointments, setAppointments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchAppointments = async () => {
@@ -107,7 +27,6 @@ const ProfileTab = ({ user, setUser }) => {
                 setAppointments(res.data);
             } catch (err) {
                 console.error("Failed to fetch appointments", err);
-                setError("Couldn't load appointments.");
             } finally {
                 setIsLoading(false);
             }
@@ -118,88 +37,185 @@ const ProfileTab = ({ user, setUser }) => {
     const handleUploadComplete = (newPhotoUrl) => {
         setUser(prevUser => ({ ...prevUser, photoUrl: newPhotoUrl }));
     };
+    
+    const MainProfileView = () => (
+        <div className="w-full max-w-md mx-auto">
+            <div className="flex justify-between items-center p-4">
+                <div className="w-6"></div> {/* Spacer */}
+                <h1 className="text-xl font-bold text-gray-800">My Profile</h1>
+                <button className="text-gray-500"><SettingsIcon /></button>
+            </div>
 
-    const TabButton = ({ tabName, children }) => (
-        <button 
-            onClick={() => setActiveTab(tabName)}
-            className={`py-3 px-6 font-semibold transition-colors duration-200 -mb-px border-b-2 ${activeTab === tabName ? 'text-teal-500 border-teal-500' : 'text-gray-500 border-transparent hover:border-gray-300'}`}>
-            {children}
-        </button>
+            <div className="p-4 text-center">
+                <div className="relative w-28 h-28 mx-auto mb-2">
+                    <img 
+                        src={user.photoUrl || 'https://via.placeholder.com/150'} 
+                        alt="Profile" 
+                        className="w-full h-full rounded-full object-cover border-4 border-white shadow-md"
+                    />
+                    <div className="absolute bottom-0 right-0">
+                        <FileUpload userId={user._id} onUploadComplete={handleUploadComplete} simpleIcon={true} />
+                    </div>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800">{user.name}</h2>
+                <p className="text-sm text-gray-500">{user.email}</p>
+                <button 
+                    onClick={() => setView('edit')}
+                    className="mt-4 bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg shadow-sm hover:bg-blue-600 transition-colors"
+                >
+                    Edit Profile
+                </button>
+            </div>
+
+            <div className="my-6">
+                {/* This is where the list from the mockup would go. */}
+                {/* For now, we show appointments directly as it's the most relevant info */}
+                <AppointmentsList appointments={appointments} isLoading={isLoading} />
+            </div>
+
+            <div className="p-4">
+                <button onClick={handleLogout} className="w-full flex items-center justify-center p-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    <LogoutIcon />
+                    Log Out
+                </button>
+            </div>
+        </div>
+    );
+
+    if (view === 'edit') {
+        return <EditProfileView user={user} setUser={setUser} goBack={() => setView('main')} />;
+    }
+
+    return <MainProfileView />;
+};
+
+// --- Edit Profile View Component ---
+const EditProfileView = ({ user, setUser, goBack }) => {
+    const [name, setName] = useState(user.name);
+    const [isSaving, setIsSaving] = useState(false);
+    const [message, setMessage] = useState({ type: '', text: '' });
+
+    // Separate states for password
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+    const handleProfileUpdate = async (e) => {
+        e.preventDefault();
+        setIsSaving(true);
+        setMessage({ type: '', text: '' });
+        try {
+            const res = await api.put(`/auth/user/${user._id}`, { name });
+            setUser(res.data); // Update user state in parent
+            setMessage({ type: 'success', text: 'Profile updated successfully!' });
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to update profile.' });
+        }
+        setIsSaving(false);
+    };
+
+    const handlePasswordChange = async (e) => {
+        e.preventDefault();
+        if (newPassword !== confirmPassword) {
+            setMessage({ type: 'error', text: 'New passwords do not match.' });
+            return;
+        }
+        setIsChangingPassword(true);
+        setMessage({ type: '', text: '' });
+        try {
+            await api.put('/auth/change-password', { userId: user._id, currentPassword, newPassword });
+            setMessage({ type: 'success', text: 'Password changed successfully!' });
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (err) {
+            setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to change password.' });
+        }
+        setIsChangingPassword(false);
+    };
+
+    const FormInput = ({ label, value, onChange, type = 'text', placeholder, required = true }) => (
+        <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
+            <input 
+                type={type}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                required={required}
+                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+        </div>
     );
 
     return (
-        <div className="w-full max-w-5xl mx-auto animate-fade-in pb-12">
-            {/* --- Profile Header --- */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                {/* Cover Photo */}
-                <div className="h-48 bg-gradient-to-r from-teal-400 to-blue-500 relative">
-                     {/* Profile Picture & Upload */}
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
-                        <div className="relative w-36 h-36 group">
-                            <img 
-                                src={user.photoUrl || 'https://via.placeholder.com/150'} 
-                                alt="Profile"
-                                className="w-full h-full rounded-full object-cover border-4 border-white shadow-lg"
-                            />
-                            <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <FileUpload userId={user._id} onUploadComplete={handleUploadComplete} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* User Info & Tabs */}
-                <div className="pt-20 pb-2 px-6">
-                    <div className="text-center">
-                        <h2 className="text-3xl font-bold text-gray-800">{user.name}</h2>
-                        <p className="text-sm text-gray-500 mt-1">{user.email}</p>
-                    </div>
-                    <div className="mt-4 flex justify-center border-b border-gray-200">
-                        <TabButton tabName="appointments">My Appointments</TabButton>
-                        <TabButton tabName="security">Security</TabButton>
-                    </div>
-                </div>
+        <div className="w-full max-w-md mx-auto p-4">
+            <div className="flex items-center mb-6">
+                <button onClick={goBack} className="mr-4 text-gray-600">
+                    <BackIcon />
+                </button>
+                <h1 className="text-xl font-bold text-gray-800">Edit Profile</h1>
             </div>
 
-            {/* --- Tab Content --- */}
-            <div className="mt-8">
-                {isLoading && <div className="text-center p-8">Loading...</div>}
-                {error && <div className="text-center p-8 text-red-500">{error}</div>}
-                
-                {!isLoading && !error && (
-                    <div className="animate-fade-in">
-                        {activeTab === 'appointments' && (
-                            <div className="bg-white p-6 rounded-xl shadow-lg">
-                                <h3 className="text-xl font-bold text-gray-800 mb-4">Your Appointments</h3>
-                                {appointments.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {appointments.map(appt => (
-                                            <div key={appt._id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all hover:bg-gray-50">
-                                                <div>
-                                                    <p className="font-semibold text-gray-800">Session with {appt.counselor.name}</p>
-                                                    <p className="text-sm text-gray-600">
-                                                        {new Date(appt.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at {appt.time}
-                                                    </p>
-                                                </div>
-                                                <StatusBadge status={appt.status} />
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-gray-500">You have no scheduled appointments. Use the "Book a Session" tab to get started.</p>
-                                )}
-                            </div>
-                        )}
+            {message.text && (
+                <div className={`p-3 rounded-lg mb-4 text-sm ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {message.text}
+                </div>
+            )}
 
-                        {activeTab === 'security' && (
-                            <div className="bg-white p-6 rounded-xl shadow-lg">
-                                <h3 className="text-xl font-bold text-gray-800 mb-4">Security Settings</h3>
-                                <ChangePasswordForm user={user} />
-                            </div>
-                        )}
-                    </div>
-                )}
+            <div className="space-y-6">
+                <form onSubmit={handleProfileUpdate} className="space-y-4 p-6 bg-white rounded-lg shadow-sm border">
+                    <h2 class="text-lg font-semibold text-gray-700">Personal Information</h2>
+                    <FormInput label="Full Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
+                    <FormInput label="Email" value={user.email} onChange={() => {}} type="email" placeholder="Your email" required={false} />
+                    <button type="submit" disabled={isSaving} className="w-full bg-blue-500 text-white font-semibold py-2.5 rounded-lg shadow-sm hover:bg-blue-600 disabled:opacity-50">
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </form>
+
+                <form onSubmit={handlePasswordChange} className="space-y-4 p-6 bg-white rounded-lg shadow-sm border">
+                    <h2 class="text-lg font-semibold text-gray-700">Change Password</h2>
+                    <FormInput label="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} type="password" placeholder="••••••••" />
+                    <FormInput label="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" placeholder="••••••••" />
+                    <FormInput label="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} type="password" placeholder="••••••••" />
+                    <button type="submit" disabled={isChangingPassword} className="w-full bg-gray-700 text-white font-semibold py-2.5 rounded-lg shadow-sm hover:bg-gray-800 disabled:opacity-50">
+                        {isChangingPassword ? 'Updating...' : 'Change Password'}
+                    </button>
+                </form>
             </div>
+        </div>
+    );
+};
+
+// --- Appointments List Component ---
+const AppointmentsList = ({ appointments, isLoading }) => {
+    const StatusBadge = ({ status }) => {
+        const statusStyles = {
+            scheduled: 'bg-blue-100 text-blue-800',
+            completed: 'bg-green-100 text-green-800',
+            cancelled: 'bg-red-100 text-red-800',
+        };
+        return <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>{status}</span>;
+    };
+
+    if (isLoading) return <p className="text-center text-gray-500">Loading appointments...</p>;
+    if (appointments.length === 0) return <p className="text-center text-gray-500 p-4">No appointments scheduled.</p>;
+
+    return (
+        <div className="space-y-3 px-4">
+            <h3 className="text-lg font-semibold text-gray-700">My Appointments</h3>
+            {appointments.map(appt => (
+                <div key={appt._id} className="p-3 bg-white rounded-lg shadow-sm border flex justify-between items-center">
+                    <div>
+                        <p className="font-semibold text-gray-800">With {appt.counselor.name}</p>
+                        <p className="text-sm text-gray-600">
+                            {new Date(appt.date).toLocaleDateString()} at {appt.time}
+                        </p>
+                    </div>
+                    <StatusBadge status={appt.status} />
+                </div>
+            ))}
         </div>
     );
 };
