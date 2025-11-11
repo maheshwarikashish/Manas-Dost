@@ -165,7 +165,7 @@ const JourneysTab = () => {
     return (
         <div className="w-full max-w-7xl mx-auto animate-fade-in">
              <div className="text-left sm:text-center mb-8">
-             <h3 className="tbg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+             <h3 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
                 Wellness Journeys
             </h3>
                 <p className="mt-2 text-base text-gray-600">Choose a guided path or create your own to achieve your wellness goals.</p>
