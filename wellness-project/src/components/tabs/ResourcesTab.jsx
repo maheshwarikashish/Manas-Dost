@@ -80,7 +80,7 @@ const ResourcesTab = () => {
         <div className="w-full max-w-7xl mx-auto animate-fade-in">
             <header className="mb-6 md:mb-8">
                 <div>
-                    <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">Resource Hub</h2>
+                    <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-orange-300 to-red-300 bg-clip-text text-transparent">Resource Hub</h2>
                     <p className="mt-1 text-gray-500">Your curated library for a healthier mind.</p>
                 </div>
                 <div className="relative mt-4">
