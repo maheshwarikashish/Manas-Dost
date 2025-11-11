@@ -42,7 +42,7 @@ const ProfileTab = ({ user, setUser, handleLogout }) => {
         <div className="w-full max-w-md mx-auto">
             <div className="flex justify-between items-center p-4">
                 <div className="w-6"></div> {/* Spacer */}
-                <h1 className="text-xl font-bold text-gray-800">My Profile</h1>
+                <h1 className="text-2xl font-bold text-gray-800">My Profile</h1>
                 <button className="text-gray-500"><SettingsIcon /></button>
             </div>
 
@@ -57,19 +57,17 @@ const ProfileTab = ({ user, setUser, handleLogout }) => {
                         <FileUpload userId={user._id} onUploadComplete={handleUploadComplete} simpleIcon={true} />
                     </div>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-800">{user.name}</h2>
-                <p className="text-sm text-gray-500">{user.email}</p>
+                <h2 className="text-3xl font-bold text-gray-800">{user.name}</h2>
+                <p className="text-base text-gray-500">{user.email}</p>
                 <button 
                     onClick={() => setView('edit')}
-                    className="mt-4 bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg shadow-sm hover:bg-blue-600 transition-colors"
+                    className="mt-4 bg-orange-500 text-white font-semibold py-2 px-6 rounded-lg shadow-sm hover:bg-orange-600 transition-colors"
                 >
                     Edit Profile
                 </button>
             </div>
 
             <div className="my-6">
-                {/* This is where the list from the mockup would go. */}
-                {/* For now, we show appointments directly as it's the most relevant info */}
                 <AppointmentsList appointments={appointments} isLoading={isLoading} />
             </div>
 
@@ -144,7 +142,7 @@ const EditProfileView = ({ user, setUser, goBack }) => {
                 onChange={onChange}
                 placeholder={placeholder}
                 required={required}
-                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50"
             />
         </div>
     );
@@ -155,7 +153,7 @@ const EditProfileView = ({ user, setUser, goBack }) => {
                 <button onClick={goBack} className="mr-4 text-gray-600">
                     <BackIcon />
                 </button>
-                <h1 className="text-xl font-bold text-gray-800">Edit Profile</h1>
+                <h1 className="text-2xl font-bold text-gray-800">Edit Profile</h1>
             </div>
 
             {message.text && (
@@ -166,16 +164,16 @@ const EditProfileView = ({ user, setUser, goBack }) => {
 
             <div className="space-y-6">
                 <form onSubmit={handleProfileUpdate} className="space-y-4 p-6 bg-white rounded-lg shadow-sm border">
-                    <h2 class="text-lg font-semibold text-gray-700">Personal Information</h2>
+                    <h2 class="text-xl font-bold text-gray-700">Personal Information</h2>
                     <FormInput label="Full Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
                     <FormInput label="Email" value={user.email} onChange={() => {}} type="email" placeholder="Your email" required={false} />
-                    <button type="submit" disabled={isSaving} className="w-full bg-blue-500 text-white font-semibold py-2.5 rounded-lg shadow-sm hover:bg-blue-600 disabled:opacity-50">
+                    <button type="submit" disabled={isSaving} className="w-full bg-orange-500 text-white font-semibold py-2.5 rounded-lg shadow-sm hover:bg-orange-600 disabled:opacity-50">
                         {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
                 </form>
 
                 <form onSubmit={handlePasswordChange} className="space-y-4 p-6 bg-white rounded-lg shadow-sm border">
-                    <h2 class="text-lg font-semibold text-gray-700">Change Password</h2>
+                    <h2 class="text-xl font-bold text-gray-700">Change Password</h2>
                     <FormInput label="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} type="password" placeholder="••••••••" />
                     <FormInput label="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" placeholder="••••••••" />
                     <FormInput label="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} type="password" placeholder="••••••••" />
@@ -192,7 +190,7 @@ const EditProfileView = ({ user, setUser, goBack }) => {
 const AppointmentsList = ({ appointments, isLoading }) => {
     const StatusBadge = ({ status }) => {
         const statusStyles = {
-            scheduled: 'bg-blue-100 text-blue-800',
+            scheduled: 'bg-orange-100 text-orange-800',
             completed: 'bg-green-100 text-green-800',
             cancelled: 'bg-red-100 text-red-800',
         };
@@ -204,7 +202,7 @@ const AppointmentsList = ({ appointments, isLoading }) => {
 
     return (
         <div className="space-y-3 px-4">
-            <h3 className="text-lg font-semibold text-gray-700">My Appointments</h3>
+            <h3 className="text-xl font-bold text-gray-700">My Appointments</h3>
             {appointments.map(appt => (
                 <div key={appt._id} className="p-3 bg-white rounded-lg shadow-sm border flex justify-between items-center">
                     <div>
