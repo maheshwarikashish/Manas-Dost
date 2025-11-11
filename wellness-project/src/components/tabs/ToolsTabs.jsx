@@ -270,7 +270,7 @@ const ToolsTab = () => {
         <div className="min-h-full bg-gray-50/50 p-4 sm:p-8 md:p-12">
             <div className="max-w-7xl mx-auto">
                 <div className="text-center mb-12">
-                     <h3 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-orange-300 to-red-300 bg-clip-text text-transparent">
+                     <h3 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
                         AI-Powered Tools
                     </h3>
                     <p className="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">Your personal assistants for goal setting and self-reflection.</p>
