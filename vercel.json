@@ -18,7 +18,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/wellness-project/index.html"
+      "destination": "/index.html"
     }
   ]
 }
