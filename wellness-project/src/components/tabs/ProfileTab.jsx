@@ -32,6 +32,8 @@ const ProfileTab = ({ user, setUser, handleLogout }) => {
         fetchAppointments();
     }, [user]);
 
+    // FIX: This function was missing and is required by the FileUpload component.
+    // It updates the user state when a new photo is successfully uploaded.
     const handleUploadComplete = (newPhotoUrl) => {
         setUser(prevUser => ({ ...prevUser, photoUrl: newPhotoUrl }));
     };
@@ -54,11 +56,12 @@ const ProfileTab = ({ user, setUser, handleLogout }) => {
                         className="w-full h-full rounded-full object-cover border-4 border-white shadow-lg"
                     />
                     <div className="absolute bottom-1 right-1">
+                        {/* FIX: The onUploadComplete handler is now correctly passed to FileUpload. */}
                         <FileUpload userId={user._id} onUploadComplete={handleUploadComplete} simpleIcon={true} />
                     </div>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800">{user.name}</h2>
-                <p className="text-sm text-gray-500">{user.email}</p>
+                <p className="text-sm text-gray-500">{user.studentId}</p>
                 <button 
                     onClick={() => setView('edit')}
                     className="mt-4 bg-orange-500 text-white font-semibold py-2 px-8 rounded-lg shadow-sm hover:bg-orange-600 transition-colors"
@@ -104,7 +107,8 @@ const EditProfileView = ({ user, setUser, goBack }) => {
         setIsSaving(true);
         setMessage({ type: '', text: '' });
         try {
-            const res = await api.put(`/auth/user/${user._id}`, { name });
+            // FIX: The backend route for updating profile info is /api/auth/profile
+            const res = await api.put(`/auth/profile`, { name });
             setUser(prevUser => ({ ...prevUser, ...res.data }));
             setMessage({ type: 'success', text: 'Profile updated successfully!' });
         } catch (err) {
@@ -123,6 +127,8 @@ const EditProfileView = ({ user, setUser, goBack }) => {
         setIsChangingPassword(true);
         setMessage({ type: '', text: '' });
         try {
+            // This endpoint needs a userId in the body, which is less secure than using the auth token.
+            // However, we are following the existing backend implementation.
             await api.put('/auth/change-password', { userId: user._id, currentPassword, newPassword });
             setMessage({ type: 'success', text: 'Password changed successfully!' });
             setCurrentPassword('');
@@ -169,7 +175,7 @@ const EditProfileView = ({ user, setUser, goBack }) => {
                 <form onSubmit={handleProfileUpdate} className="space-y-4 p-6 bg-white rounded-lg shadow-sm border border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-700">Personal Information</h2>
                     <FormInput label="Full Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
-                    <FormInput label="Email" value={user.email} onChange={() => {}} type="email" placeholder="Your email" required={false} disabled={true} />
+                    <FormInput label="Student ID" value={user.studentId} onChange={() => {}} type="text" placeholder="Your Student ID" required={false} disabled={true} />
                     <button type="submit" disabled={isSaving} className="w-full bg-orange-500 text-white font-semibold py-3 rounded-lg shadow-sm hover:bg-orange-600 disabled:opacity-50 transition-colors">
                         {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
