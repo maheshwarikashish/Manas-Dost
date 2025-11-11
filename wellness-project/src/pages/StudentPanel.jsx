@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar'; 
-import ProfileTab from '../../components/tabs/ProfileTab';
-import CommunityTab from '../../components/tabs/CommunityTab';
-import AppointmentsTab from '../../components/tabs/AppointmentsTab';
-import ChatbotTab from '../../components/tabs/ChatbotTab';
-import ResourcesTab from '../../components/tabs/ResourcesTab';
-import SettingsTab from '../../components/tabs/SettingsTab';
+import Sidebar from '../components/Sidebar'; 
+import ProfileTab from '../components/tabs/ProfileTab';
+import CommunityTab from '../components/tabs/CommunityTab';
+import AppointmentsTab from '../components/tabs/AppointmentsTab';
+import ChatbotTab from '../components/tabs/ChatbotTab';
+import ResourcesTab from '../components/tabs/ResourcesTab';
+import SettingsTab from '../components/tabs/SettingsTab';
 
 const StudentPanel = ({ user, setUser, handleLogout }) => {
     const [activeTab, setActiveTab] = useState('Profile');
