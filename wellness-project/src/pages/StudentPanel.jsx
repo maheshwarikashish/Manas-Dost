@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar'; 
+import Sidebar from '../../components/Sidebar'; 
 import ProfileTab from '../components/tabs/ProfileTab';
 import CommunityTab from '../components/tabs/CommunityTab';
-import BookingTab from '../components/tabs/BookingTab';
-import ChatTab from '../components/tabs/ChatTab';
+import AppointmentsTab from '../components/tabs/AppointmentsTab';
+import ChatbotTab from '../components/tabs/ChatbotTab';
 import ResourcesTab from '../components/tabs/ResourcesTab';
-import ToolsTabs from '../components/tabs/ToolsTabs';
+import SettingsTab from '../components/tabs/SettingsTab';
 
 const StudentPanel = ({ user, setUser, handleLogout }) => {
     const [activeTab, setActiveTab] = useState('Profile');
@@ -22,13 +22,13 @@ const StudentPanel = ({ user, setUser, handleLogout }) => {
             case 'Community':
                 return <CommunityTab user={user} />;
             case 'Appointments':
-                return <BookingTab user={user} />;
+                return <AppointmentsTab user={user} />;
             case 'Chatbot':
-                return <ChatTab />;
+                return <ChatbotTab />;
             case 'Resources':
                 return <ResourcesTab />;
             case 'Settings':
-                return <ToolsTabs user={user} />;
+                return <SettingsTab user={user} />;
             default:
                 return <ProfileTab user={user} setUser={setUser} handleLogout={handleLogout} />;
         }
