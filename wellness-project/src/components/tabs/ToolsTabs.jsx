@@ -52,7 +52,7 @@ const GoalSetter = ({ theme, onPlanGenerated }) => {
 
     return (
         <Card className="border-t-4 border-[#00A896]">
-            <h4 className="text-xl font-bold text-gray-800">AI Goal Setter</h4>
+            <h4 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-br from-[#FF9F43] to-[#FF6B6B] bg-clip-text text-transparent">AI Goal Setter</h4>
             <p className="text-sm text-gray-500 mb-4 mt-1">Let our AI create a step-by-step plan for you.</p>
             <textarea 
                 value={goalInput} 

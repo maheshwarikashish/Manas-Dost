@@ -58,7 +58,7 @@ const CommunityTab = () => {
         <div>
             <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
                 {/* ✨ MODIFIED: Themed heading */}
-                <h3 className="text-3xl font-bold text-[#2C3E50]">Peer Support Community</h3>
+                <h3 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-br from-[#FF9F43] to-[#FF6B6B] bg-clip-text text-transparent">Peer Support Community</h3>
                 {/* ✨ MODIFIED: Themed primary button */}
                 <button
                     onClick={() => setIsModalOpen(true)}
