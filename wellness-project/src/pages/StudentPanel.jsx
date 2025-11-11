@@ -36,7 +36,7 @@ const StudentPanel = ({ user, setUser, handleLogout }) => {
 
     return (
         <div className="flex h-screen bg-gray-100">
-            <Sidebar activeTab={active.Tab} setActiveTab={setActiveTab} userRole={user.role} />
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole={user.role} />
             <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
                 {renderTab()}
             </main>
