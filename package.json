@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "react-router-dom": "^7.9.2"
+  },
+  "scripts": {
+    "start": "cd server && npm start"
   }
 }
