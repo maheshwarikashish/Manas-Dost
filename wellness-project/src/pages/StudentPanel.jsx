@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar'; 
+import Sidebar from '../components/Sidebar'; 
 import ProfileTab from '../components/tabs/ProfileTab';
 import CommunityTab from '../components/tabs/CommunityTab';
 import AppointmentsTab from '../components/tabs/AppointmentsTab';
