@@ -10,6 +10,8 @@ const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 
 
 // --- Main ProfileTab Component ---
 const ProfileTab = ({ user, setUser, handleLogout }) => {
+    // This console.log is added to help confirm that the latest version of the file is being used.
+    console.log('--- PROFILE TAB RENDERED: VERSION 4 ---');
     const [view, setView] = useState('main'); // 'main' or 'edit'
     const [appointments, setAppointments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -32,10 +34,14 @@ const ProfileTab = ({ user, setUser, handleLogout }) => {
         fetchAppointments();
     }, [user]);
 
-    // FIX: This function was missing and is required by the FileUpload component.
+    // FIX: This function is required by the FileUpload component.
     // It updates the user state when a new photo is successfully uploaded.
     const handleUploadComplete = (newPhotoUrl) => {
-        setUser(prevUser => ({ ...prevUser, photoUrl: newPhotoUrl }));
+        if (typeof setUser === 'function') {
+            setUser(prevUser => ({ ...prevUser, photoUrl: newPhotoUrl }));
+        } else {
+            console.error("ProfileTab: setUser is not a function!");
+        }
     };
     
     const MainProfileView = () => (
@@ -96,7 +102,6 @@ const EditProfileView = ({ user, setUser, goBack }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
-    // Separate states for password
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -109,7 +114,9 @@ const EditProfileView = ({ user, setUser, goBack }) => {
         try {
             // FIX: The backend route for updating profile info is /api/auth/profile
             const res = await api.put(`/auth/profile`, { name });
-            setUser(prevUser => ({ ...prevUser, ...res.data }));
+            if (typeof setUser === 'function') {
+                setUser(prevUser => ({ ...prevUser, ...res.data }));
+            }
             setMessage({ type: 'success', text: 'Profile updated successfully!' });
         } catch (err) {
             setMessage({ type: 'error', text: 'Failed to update profile.' });
@@ -127,8 +134,6 @@ const EditProfileView = ({ user, setUser, goBack }) => {
         setIsChangingPassword(true);
         setMessage({ type: '', text: '' });
         try {
-            // This endpoint needs a userId in the body, which is less secure than using the auth token.
-            // However, we are following the existing backend implementation.
             await api.put('/auth/change-password', { userId: user._id, currentPassword, newPassword });
             setMessage({ type: 'success', text: 'Password changed successfully!' });
             setCurrentPassword('');
