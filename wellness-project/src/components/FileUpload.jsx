@@ -22,8 +22,8 @@ const FileUpload = ({ userId, onUploadComplete, simpleIcon = false }) => {
         setUploadError(null);
 
         try {
-            // The endpoint is now correct because api.js is fixed
-            const res = await api.put(`/auth/user/${userId}/photo`, formData, {
+            // FIX APPLIED: Removed the incorrect '/user' segment from the URL
+            const res = await api.put(`/auth/${userId}/photo`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -40,7 +40,6 @@ const FileUpload = ({ userId, onUploadComplete, simpleIcon = false }) => {
 
     const { getRootProps, getInputProps } = useDropzone({ 
         onDrop, 
-        // FIX APPLIED HERE: Using the new object format for the accept prop
         accept: {
             'image/jpeg': [],
             'image/png': []
