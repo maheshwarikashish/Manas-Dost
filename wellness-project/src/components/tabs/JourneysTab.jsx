@@ -221,7 +221,7 @@ const JourneysTab = () => {
                                 <input 
                                     type="text" 
                                     value={customInput}
-                                    onChange={(e) => setCustomInput(e.target.value)}
+                                    onChange={(e) => setCustomInput(e.targe.value)}
                                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 outline-none transition bg-white text-sm" 
                                     placeholder="e.g., 'Feel more energized'"
                                     onKeyPress={(e) => e.key === 'Enter' && handleGenerateCustom()}

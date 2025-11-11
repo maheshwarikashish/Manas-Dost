@@ -61,8 +61,8 @@ const ProfileTab = ({ user, setUser }) => { // Accept setUser to update user sta
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* --- Left Column: Profile Card --- */}
-                <div className="lg:col-span-1">
-                    <div className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-teal-500 text-center">
+                <div className="lg:col-span-1 h-full">
+                    <div className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-teal-500 text-center h-full">
                         <div className="relative w-32 h-32 mx-auto mb-4">
                             <img 
                                 src={user.photoUrl || 'https://via.placeholder.com/150'} 
@@ -78,8 +78,8 @@ const ProfileTab = ({ user, setUser }) => { // Accept setUser to update user sta
                 </div>
 
                 {/* --- Right Column: Appointments --- */}
-                <div className="lg:col-span-2">
-                    <div className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-orange-500">
+                <div className="lg:col-span-2 h-full">
+                    <div className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-orange-500 h-full">
                         <h3 className="text-xl font-bold text-gray-800 mb-4">Your Appointments</h3>
                         {appointments.length > 0 ? (
                             <div className="space-y-4">
