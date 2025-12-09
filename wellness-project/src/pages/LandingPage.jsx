@@ -40,6 +40,12 @@ const LandingPage = () => {
             >
               I Have an Account
             </Link>
+            <Link
+              to="/admin/login"
+              className="w-full sm:w-auto bg-white text-gray-600 font-bold px-8 py-3 rounded-lg shadow-md hover:shadow-lg border border-gray-200 transform hover:-translate-y-1 transition-all duration-300"
+            >
+              Admin Login
+            </Link>
           </div>
         </div>
       </main>

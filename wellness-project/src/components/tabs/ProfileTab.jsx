@@ -1,12 +1,11 @@
 import React from 'react';
 
 const ProfileTab = ({ user }) => {
-    // Dummy data for demonstration
     const userProfile = {
         name: user ? user.name : 'John Doe',
         email: user ? user.email : 'john.doe@example.com',
         bio: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-        avatar: 'https://via.placeholder.com/150'
+        avatar: user && user.profilePictureUrl ? user.profilePictureUrl : 'https://via.placeholder.com/150'
     };
 
     return (

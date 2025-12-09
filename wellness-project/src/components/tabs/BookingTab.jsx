@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { default as api } from '../../services/api';
 
@@ -43,6 +42,21 @@ const BookingTab = ({ user, navigateToTab }) => {
     const [confirmation, setConfirmation] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [availableTimes, setAvailableTimes] = useState([]);
+
+    const getStatus = (status) => {
+        const now = new Date();
+        const appointmentDate = new Date(status.date);
+        if (appointmentDate > now) {
+            return "Pending";
+        } else {
+            if (status.status === "completed") {
+                return "Completed";
+            } else {
+                return "Missed";
+            }
+        }
+    };
+
 
     // -- DECOUPLED DATA FETCHING --
 
@@ -224,7 +238,7 @@ const BookingTab = ({ user, navigateToTab }) => {
                     
                     {/* --- Step 3: Select Time --- */}
                     <div className={`transition-opacity duration-500 ${step < 3 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
-                       <h4 className="font-bold text-lg mb-3 text-gray-800">3. Choose an Available Time</h4>
+                       <h4 className="font-bold text-lg mb-3 text.gray-800">3. Choose an Available Time</h4>
                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                            {availableTimes.length > 0 ? availableTimes.map(time => (
                                <button key={time} onClick={() => handleSelect('time', time)} className={`p-3 border-2 rounded-lg font-semibold transition-colors duration-200 
@@ -256,8 +270,8 @@ const BookingTab = ({ user, navigateToTab }) => {
                                     <p className="font-semibold">{appt.counselor.name}</p>
                                     <p className="text-sm text-gray-600">{new Date(appt.date).toLocaleDateString()} at {appt.time}</p>
                                 </div>
-                                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${appt.status === 'scheduled' ? 'bg-blue-100 text-blue-800' : appt.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                    {appt.status}
+                                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getStatus(appt) === 'Pending' ? 'bg-blue-100 text-blue-800' : getStatus(appt) === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                    {getStatus(appt)}
                                 </span>
                             </div>
                         ))}
