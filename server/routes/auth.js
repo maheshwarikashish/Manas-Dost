@@ -4,9 +4,20 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs'); // Added fs module
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const CollegeStudent = require('../models/CollegeStudent.js');
+
+// --- Middleware to ensure uploads directory exists ---
+const ensureUploadsDir = (req, res, next) => {
+    const uploadsDir = './uploads/';
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    next();
+};
+
 
 // --- Multer Configuration for File Uploads ---
 const storage = multer.diskStorage({
@@ -173,7 +184,7 @@ router.put('/profile', auth, async (req, res) => {
 // @route   PUT /api/auth/:id/photo
 // @desc    Upload a profile photo
 // @access  Private
-router.put('/:id/photo', [auth, upload.single('photo')], async (req, res) => {
+router.put('/:id/photo', [auth, ensureUploadsDir, upload.single('photo')], async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ msg: 'Please upload a file' });
