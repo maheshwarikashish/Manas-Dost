@@ -62,6 +62,8 @@ const JourneysTab = () => {
         setView('display');
     };    
     
+
+    
     const handleGenerateCustom = async () => {
         if (!customInput) return;
         setIsGenerating(true);
