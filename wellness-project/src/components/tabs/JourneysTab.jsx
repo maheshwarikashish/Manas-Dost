@@ -113,7 +113,7 @@ const JourneysTab = () => {
             if (!wasCompleted) {
                 const newCount = tasksCompletedToday + 1;
                 setTasksCompletedToday(newCount);
-                showFeedback(newCount > 1 ? `Awesome! That's ${newCount} tasks today!` : 'Great start! Keep it up!');
+                showFeedback(newCount > 1 ? `Awesome! That\'s ${newCount} tasks today!` : 'Great start! Keep it up!');
             } else {
                 setTasksCompletedToday(Math.max(0, tasksCompletedToday - 1));
             }
@@ -221,7 +221,7 @@ const JourneysTab = () => {
                                 <input 
                                     type="text" 
                                     value={customInput}
-                                    onChange={(e) => setCustomInput(e.targe.value)}
+                                    onChange={(e) => setCustomInput(e.target.value)}
                                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 outline-none transition bg-white text-sm" 
                                     placeholder="e.g., 'Feel more energized'"
                                     onKeyPress={(e) => e.key === 'Enter' && handleGenerateCustom()}
