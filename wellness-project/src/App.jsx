@@ -47,7 +47,7 @@ const App = () => {
                 />
                 <Route 
                     path="/student-panel" 
-                    element={user ? <StudentPanel user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
+                    element={user ? <StudentPanel user={user} setUser={setUser} handleLogout={handleLogout} /> : <Navigate to="/login" />}
                 />
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
